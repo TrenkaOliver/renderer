@@ -5,50 +5,87 @@
 #include "geometry/object.h"
 #include "graphics/trace.h"
 
-int render(FILE *f, int width, int height, Scene *scene, Camera *cam) {
+int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     unsigned char *pa, *pp;
-    int i, j;
-    double right, up, aspect;
+    int i, j, aa_i, aa_j;
+    double right, up, aa_right, aa_up, aspect, fov_scale, color_scale, x_scale, inv_width, inv_height, inv_samples;
     size_t count;
     Pixel p;
     Vec c;
     Line ray;
 
     fprintf(f, "P6\n");
-    fprintf(f, "%d %d\n", width, height);
+    fprintf(f, "%d %d\n", settings->width, settings->height);
     fprintf(f, "255\n");
 
-    count = width * height * 3;
+    count = settings->width * settings->height * 3;
     pa = pp = malloc(count);
     if (!pa) return 1;
 
-    aspect = (double)width / height;
+    aspect = (double)settings->width / settings->height;
+    fov_scale = tan(cam->fov * 0.5);
+    color_scale = 1.0 / (settings->aa_samples * settings->aa_samples);
+    x_scale = aspect * fov_scale;
+    inv_width = 1.0 / settings->width;
+    inv_height = 1.0 / settings->height;
+    inv_samples = 1.0 / settings->aa_samples;
 
-    for (i = 0; i < height; i++) {
-        up = 1.0 - (double)i / height * 2.0;
-        for (j = 0; j < width; j++) {
-            right = (-1.0 + (double)j / width * 2.0) * aspect;
+    for (i = 0; i < settings->height; i++) {
+        for (j = 0; j < settings->width; j++) {
+            c = vec(0.0, 0.0, 0.0);            
+            for (aa_i = 0; aa_i < settings->aa_samples; aa_i++) {
+                aa_up = (aa_i + 0.5) * inv_samples;
+                up = (1.0 - (i + aa_up) * inv_height * 2.0) * fov_scale;
+                for (aa_j = 0; aa_j < settings->aa_samples; aa_j++) {
+                    aa_right = (aa_j + 0.5) * inv_samples;
+                    right = (-1.0 + (j + aa_right) * inv_width * 2.0) * x_scale;
 
-            ray = create_line(
-                cam->position,
-                normalize(v_add(
-                    cam->forward,
-                    v_add(
-                        scale(cam->right, right), 
-                        scale(cam->up, up)
-                    )
-                ))
-            );
+                    ray = create_line(
+                        cam->position,
+                        normalize(v_add(
+                            cam->forward,
+                            v_add(
+                                scale(cam->right, right), 
+                                scale(cam->up, up)
+                            )
+                        ))
+                    );
 
-            c = trace_ray(&ray, scene, cam, 3);
-
+                    c = v_add(c, scale(trace_ray(&ray, scene, cam, settings->max_depth), color_scale));
+                }
+            }
             p = color_to_pixel(c);
-            
             *pp++ = p.r;
             *pp++ = p.g;
             *pp++ = p.b;
         }
     }
+
+    // for (i = 0; i < height; i++) {
+    //     up = (1.0 - (i + 0.5) / height * 2.0) * fov_scale;
+    //     for (j = 0; j < width; j++) {
+    //         right = (-1.0 + (j + 0.5) / width * 2.0) * aspect * fov_scale;
+
+    //         ray = create_line(
+    //             cam->position,
+    //             normalize(v_add(
+    //                 cam->forward,
+    //                 v_add(
+    //                     scale(cam->right, right), 
+    //                     scale(cam->up, up)
+    //                 )
+    //             ))
+    //         );
+
+    //         c = trace_ray(&ray, scene, cam, 3);
+
+    //         p = color_to_pixel(c);
+            
+    //         *pp++ = p.r;
+    //         *pp++ = p.g;
+    //         *pp++ = p.b;
+    //     }
+    // }
 
     fwrite(pa, sizeof(char), count, f);
     

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -Iinclude
+CFLAGS = -Wall -Wextra -O3 -Iinclude
 
 SRC = 	main.c \
 		src/geometry/mesh/box.c \

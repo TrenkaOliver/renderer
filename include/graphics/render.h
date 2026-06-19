@@ -15,7 +15,14 @@ typedef struct Pixel {
     unsigned char b;
 } Pixel;
 
+typedef struct RenderSettings {
+    int height;
+    int width;
+    int max_depth;
+    int aa_samples;
+} RenderSettings;
+
 Pixel pixel(unsigned char r, unsigned char g, unsigned char b);
 Pixel color_to_pixel(Vec c);
 
-int render(FILE *f, int width, int height, Scene *scene, Camera *cam);
+int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings);

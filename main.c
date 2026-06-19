@@ -34,29 +34,30 @@ Material orange = {
 };
 
 Material green = {
-    .diffuse = {.x = 0.1, .y = 0.1, .z = 0.2},
+    .diffuse = {.x = 0.1, .y = 1.0, .z = 0.2},
     .specular = {.x = 0.4, .y = 0.4, .z = 0.4},
     .shininess = 32.0,
     .reflectivity = 0.0,
 };
 
 int main() {
-    int width = 1280;
-    int height = 720;
+    int width = 2560;
+    int height = 1440;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
-    Camera cam = create_look_at_camera(vec(0.0, 0.0, 125.0), vec(0.0, 1.0, 125.0));
+    Camera cam = create_look_at_camera(vec(0.0, 0.0, 125.0), vec(0.0, 1.0, 125.0), 1.0472);
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 3};
 
-    add_sphere(&scene, vec(0.0, 100.0, 125.0), 25.0, &mirror);
+    add_sphere(&scene, vec(0.0, 300.0, 125.0), 25.0, &mirror);
 
-    add_box(&scene, vec(-120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 300.0, 300.0), &blue);
+    add_box(&scene, vec(-5.0, 295.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 10.0, 500.0), &green);
 
-    add_box(&scene, vec(120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 300.0, 300.0), &orange);
+    add_box(&scene, vec(-120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &blue);
 
-
+    add_box(&scene, vec(120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &orange);
 
     add_plane(
         &scene, 
@@ -66,6 +67,6 @@ int main() {
     );
 
 
-    render(f, width, height, &scene, &cam);
+    render(f, &scene, &cam, &settings);
     fclose(f);
 }
