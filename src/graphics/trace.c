@@ -156,11 +156,11 @@ HitResult get_first_hit(Line *ray, Scene *scene) {
     return *smallest;
 }
 
-Vec trace_ray(Line *ray, Scene *scene, Camera *cam) {
-    Line shadow_ray;
+Vec trace_ray(Line *ray, Scene *scene, Camera *cam, int depth) {
+    Line shadow_ray, reflection_ray;
     HitResult hit, shadow_hit;
-    Vec reflection;
-    Vec c, c_diffuse, c_specular, c_ambient;
+    Vec light_reflection, ray_reflection;
+    Vec c, c_local, c_reflected, c_diffuse, c_specular, c_ambient;
     double intensity;
 
     hit = get_first_hit(ray, scene);
@@ -168,11 +168,11 @@ Vec trace_ray(Line *ray, Scene *scene, Camera *cam) {
     if (isnan(hit.t)) {
         return vec(0.0, 0.0, 0.0);
     } else {
-        shadow_ray = line(v_add(hit.point, scale(hit.normal, EPSILON)), neg(scene->dir_light.direction));
+        shadow_ray = create_line(v_add(hit.point, scale(hit.normal, EPSILON)), neg(scene->dir_light.direction));
         shadow_hit = get_first_hit(&shadow_ray, scene);
         
         intensity = dot(hit.normal, neg(scene->dir_light.direction));
-        reflection = normalize(v_sub(scene->dir_light.direction, scale(hit.normal, 2 * dot(hit.normal, scene->dir_light.direction))));
+        light_reflection = normalize(v_sub(scene->dir_light.direction, scale(hit.normal, 2 * dot(hit.normal, scene->dir_light.direction))));
 
         if (!isnan(shadow_hit.t) || intensity < 0) {
             c_diffuse = vec(0.0, 0.0, 0.0);
@@ -195,7 +195,7 @@ Vec trace_ray(Line *ray, Scene *scene, Camera *cam) {
                     hit.material->specular
                 ), 
                 pow(
-                    fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), reflection)), 
+                    fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), light_reflection)), 
                     hit.material->shininess
                 )
             );
@@ -203,7 +203,15 @@ Vec trace_ray(Line *ray, Scene *scene, Camera *cam) {
 
         c_ambient = hadamard(scene->global_ambient, hit.material->diffuse);
 
-        c = v_add(v_add(c_ambient, c_diffuse), c_specular);
+        c_local = v_add(v_add(c_ambient, c_diffuse), c_specular);
+
+        if (hit.material->reflectivity == 0.0 || depth == 0) return c_local;
+
+        ray_reflection = normalize(v_sub(ray->v, scale(hit.normal, 2 * dot(hit.normal, ray->v))));
+        reflection_ray = create_line(v_add(hit.point, scale(hit.normal, EPSILON)), ray_reflection);
+        c_reflected = trace_ray(&reflection_ray, scene, cam, depth - 1);
+
+        c = v_add(scale(c_local, 1.0 - hit.material->reflectivity), scale(c_reflected, hit.material->reflectivity));
 
         return c;
     }

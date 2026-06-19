@@ -29,7 +29,7 @@ int render(FILE *f, int width, int height, Scene *scene, Camera *cam) {
         for (j = 0; j < width; j++) {
             right = (-1.0 + (double)j / width * 2.0) * aspect;
 
-            ray = line(
+            ray = create_line(
                 cam->position,
                 normalize(v_add(
                     cam->forward,
@@ -40,7 +40,7 @@ int render(FILE *f, int width, int height, Scene *scene, Camera *cam) {
                 ))
             );
 
-            c = trace_ray(&ray, scene, cam);
+            c = trace_ray(&ray, scene, cam, 3);
 
             p = color_to_pixel(c);
             

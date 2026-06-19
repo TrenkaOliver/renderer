@@ -1,7 +1,7 @@
 #include <math.h>
 #include "geometry/object.h"
 
-Line line(Vec o, Vec v) {
+Line create_line(Vec o, Vec v) {
     return (Line) {
         .o = o,
         .v = normalize(v)

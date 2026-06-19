@@ -29,7 +29,7 @@ typedef struct Triangle {
     Material *m;
 } Triangle;
 
-Line line(Vec o, Vec v);
+Line create_line(Vec o, Vec v);
 Line line_from_origo(double x, double y, double z);
 void move_triangle(Triangle *triangle, Vec v);
 

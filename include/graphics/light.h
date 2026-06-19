@@ -7,6 +7,7 @@ typedef struct Material {
     Vec diffuse;
     Vec specular;
     double shininess;
+    double reflectivity;
 } Material;
 
 typedef struct DirectionalLight {

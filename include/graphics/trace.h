@@ -27,5 +27,5 @@ HitResult get_first_triangle(Line *ray, Triangles *triangles);
 
 HitResult get_first_hit(Line *ray, Scene *scene);
 
-Vec trace_ray(Line *ray, Scene *scene, Camera *cam);
+Vec trace_ray(Line *ray, Scene *scene, Camera *cam, int depth);
 #endif
