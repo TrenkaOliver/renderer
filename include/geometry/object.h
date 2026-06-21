@@ -3,6 +3,7 @@
 
 #include "vec.h"
 #include "graphics/light.h"
+#include "geometry/aabb.h"
 
 typedef struct Line {
     Vec o;
@@ -12,6 +13,7 @@ typedef struct Line {
 typedef struct Sphere {
     Vec o;
     double r;
+    AABB aabb;
     Material *m;
 } Sphere;
 
@@ -26,8 +28,17 @@ typedef struct Triangle {
     Vec b;
     Vec c;
     Vec n;
+    AABB aabb;
     Material *m;
 } Triangle;
+
+typedef struct Box {
+    Vec center;
+    Vec axes[3];
+    Vec half_size;
+    AABB aabb;
+    Material *m;
+} Box;
 
 Line create_line(Vec o, Vec v);
 Line line_from_origo(double x, double y, double z);

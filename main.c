@@ -53,11 +53,11 @@ int main() {
 
     add_sphere(&scene, vec(0.0, 300.0, 125.0), 25.0, &mirror);
 
-    add_box(&scene, vec(-5.0, 295.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 10.0, 500.0), &green);
+    add_box(&scene, vec(0.0, 300.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 10.0, 500.0), &green);
 
-    add_box(&scene, vec(-120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &blue);
+    add_box(&scene, vec(-110.0, 500.0, 150.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &blue);
 
-    add_box(&scene, vec(120.0, 0.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &orange);
+    add_box(&scene, vec(110.0, 500.0, 150.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &orange);
 
     add_plane(
         &scene, 

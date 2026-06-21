@@ -1,6 +1,5 @@
 #include "geometry/object.h"
 #include "geometry/mesh/rectangle.h"
-#include "geometry/mesh/box.h"
 #include "geometry/vec.h"
 #include "graphics/light.h"
 
@@ -22,6 +21,12 @@ typedef struct Triangles {
     size_t capacity;
 } Triangles;
 
+typedef struct Boxes {
+    Box *bp;
+    size_t count;
+    size_t capacity;
+} Boxes;
+
 
 typedef struct Scene {
     DirectionalLight dir_light;
@@ -29,6 +34,7 @@ typedef struct Scene {
     Spheres spheres;
     Planes planes;
     Triangles triangles;
+    Boxes boxes;
 } Scene;
 
 Scene create_scene();
@@ -40,8 +46,9 @@ Plane *add_plane(Scene *scene, Vec point, Vec normal, Material *material);
 Triangle *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
 Triangle *copy_triangle(Scene *scene, Triangle *triangle);
 
+Box *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m);
+
 Rectangle add_rectangle(Scene *scene, Vec position, Vec rotation, Vec size, Material *m);
 Rectangle add_rectangle_by_points(Scene *scene, Vec a, Vec b, Vec c, Vec d, Material *m);
 Rectangle copy_rectangle(Scene *scene, Rectangle *rect);
 
-Box add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m);

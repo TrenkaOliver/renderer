@@ -67,18 +67,93 @@ double triangle_ray_intersection(Triangle *triangle, Line *ray) {
     return t < 0.0 ? NAN : t;
 }
 
+double aabb_ray_intersection(AABB *aabb, Line *ray) {
+    Vec inv_v, t0, t1, t_min, t_max;
+    double t_enter, t_exit;
+
+    inv_v = vec(1.0 / ray->v.x, 1.0 / ray->v.y, 1.0 / ray->v.z);
+
+    t0 = hadamard(v_sub(aabb->min, ray->o), inv_v);
+    t1 = hadamard(v_sub(aabb->max, ray->o), inv_v);
+
+    t_min = vec(
+        fmin(t0.x, t1.x),
+        fmin(t0.y, t1.y),
+        fmin(t0.z, t1.z)
+    );
+
+    t_max = vec(
+        fmax(t0.x, t1.x),
+        fmax(t0.y, t1.y),
+        fmax(t0.z, t1.z)
+    );
+
+    t_enter = fmax(t_min.x, fmax(t_min.y, t_min.z));
+    t_exit = fmin(t_max.x, fmin(t_max.y, t_max.z));
+
+    if (t_exit < t_enter || t_exit < EPSILON)
+        return NAN;
+    else
+        return t_enter >= 0.0 ? t_enter : t_exit;
+}
+
+double box_ray_intersection(Box *box, Line *ray) {
+    int i;
+    double t_min, t_max, t1, t2, e, f, h, temp;
+    Vec p;
+
+    p = v_sub(box->center, ray->o);
+
+    t_min = -1e30;
+    t_max = 1e30;
+
+    for (i = 0; i < 3; i++) {
+        e = dot(box->axes[i], p);
+        f = dot(box->axes[i], ray->v);
+        h = i == 0 ? box->half_size.x : i == 1 ? box->half_size.y : box->half_size.z;
+
+        if (fabs(f) < EPSILON) {
+            if (fabs(e) > h)
+                return NAN;
+            else
+                continue;
+        }
+
+        t1 = (e - h) / f;
+        t2 = (e + h) / f;
+
+        if (t1 > t2) {
+            temp = t1;
+            t1 = t2;
+            t2 = temp;
+        }
+
+        t_min = fmax(t1, t_min);
+        t_max = fmin(t2, t_max);
+
+        if (t_min > t_max) return NAN;
+    }
+
+    if (t_max < 0.0) return NAN;
+    
+    return t_min >= 0.0 ? t_min : t_max;
+}
+
+
 HitResult get_first_sphere(Line *ray, Spheres *spheres) {
     int i;
     double t, tc;
-    Sphere *sphere;
+    Sphere *sphere, *cs;
 
     t = INFINITY;
     sphere = NULL;
     
     for (i = 0; i < spheres->count; i++) {
-        tc = sphere_ray_intersection(spheres->sp + i, ray);
+        cs = spheres->sp + i;
+        if (isnan(aabb_ray_intersection(&cs->aabb, ray))) continue;
+        tc = sphere_ray_intersection(cs, ray);
         if (tc < t) {
-            sphere = spheres->sp + i;
+            sphere = cs;
             t = tc;
         }
     }
@@ -117,15 +192,17 @@ HitResult get_first_plane(Line *ray, Planes *planes) {
 HitResult get_first_triangle(Line *ray, Triangles *triangles) {
     int i;
     double t, tc;
-    Triangle *triangle;
+    Triangle *triangle, *ct;
 
     t = INFINITY;
     triangle = NULL;
     
     for (i = 0; i < triangles->count; i++) {
-        tc = triangle_ray_intersection(triangles->tp + i, ray);
+        ct = triangles->tp + i;
+        if (isnan(aabb_ray_intersection(&ct->aabb, ray))) continue;
+        tc = triangle_ray_intersection(ct, ray);
         if (tc < t) {
-            triangle = triangles->tp + i;
+            triangle = ct;
             t = tc;
         }
     }
@@ -137,23 +214,75 @@ HitResult get_first_triangle(Line *ray, Triangles *triangles) {
     return (HitResult){.point = p, .normal = triangle->n, .t = t, .material = triangle->m};
 }
 
+HitResult get_first_box(Line *ray, Boxes *boxes) {
+    int i, negate;
+    double t, tc, d, d_min;
+    Vec dist, p, n;
+    Box *box, *cb;
+
+    t = INFINITY;
+    box = NULL;
+    
+    for (i = 0; i < boxes->count; i++) {
+        cb = boxes->bp + i;
+        if (isnan(aabb_ray_intersection(&cb->aabb, ray))) continue;
+        tc = box_ray_intersection(cb, ray);
+        if (tc < t) {
+            box = cb;
+            t = tc;
+        }
+    }
+    
+    if (!box) return (HitResult){.point = vec(0.0, 0.0, 0.0), .normal = vec(0.0, 0.0, 0.0), .t = NAN};
+    
+    p = v_add(ray->o, scale(ray->v, t));
+    
+    dist = v_sub(p, box->center);
+
+    double x = dot(box->axes[0], dist);
+    double y = dot(box->axes[1], dist);
+    double z = dot(box->axes[2], dist);
+
+    double ax = fabs(x) / box->half_size.x;
+    double ay = fabs(y) / box->half_size.y;
+    double az = fabs(z) / box->half_size.z;
+
+    if (ax >= ay && ax >= az)
+        n = (x > 0.0) ? box->axes[0] : neg(box->axes[0]);
+    else if (ay >= az)
+        n = (y > 0.0) ? box->axes[1] : neg(box->axes[1]);
+    else
+        n = (z > 0.0) ? box->axes[2] : neg(box->axes[2]);
+
+    return (HitResult){.point = p, .normal = n, .t = t, .material = box->m};
+}
+
+
 
 HitResult get_first_hit(Line *ray, Scene *scene) {
-    HitResult sphere_hit, plane_hit, triangle_hit, *smallest;
+    int i;
+    double t_min;
+    HitResult results[4], best;
 
-    sphere_hit = get_first_sphere(ray, &scene->spheres);
-    plane_hit = get_first_plane(ray, &scene->planes);
-    triangle_hit = get_first_triangle(ray, &scene->triangles);
+    results[0] = get_first_sphere(ray, &scene->spheres);
+    results[1] = get_first_plane(ray, &scene->planes);
+    results[2] = get_first_triangle(ray, &scene->triangles);
+    results[3] = get_first_box(ray, &scene->boxes);
 
-    if (isnan(sphere_hit.t) || (!isnan(plane_hit.t) && plane_hit.t < sphere_hit.t))
-        smallest = &plane_hit;
-    else
-        smallest = &sphere_hit;
+    best = (HitResult){
+        .t = NAN
+    };
 
-    if (isnan(smallest->t) || (!isnan(triangle_hit.t) && triangle_hit.t < smallest->t))
-        smallest = &triangle_hit;
-    
-    return *smallest;
+    t_min = INFINITY;
+
+    for (i = 0; i < 4; i++) {
+        if (!isnan(results[i].t) && results[i].t < t_min) {
+            best = results[i];
+            t_min = results[i].t;
+        }
+    }
+
+    return best;
 }
 
 Vec trace_ray(Line *ray, Scene *scene, Camera *cam, int depth) {
