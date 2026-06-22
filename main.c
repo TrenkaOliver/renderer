@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <time.h>
-#include "graphics/render.h"
-#include "graphics/light.h"
-#include "scene.h"
-#include "camera.h"
-#include "geometry/vec.h"
-#include "geometry/mesh/rectangle.h"
+#include "render/render.h"
+#include "light/material.h"
+#include "scene/scene.h"
+#include "camera/camera.h"
+#include "math/vec.h"
 
 Material blue = {
     .diffuse = {.x = 0.2, .y = 0.4, .z = 1.0},

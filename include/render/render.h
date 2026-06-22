@@ -2,9 +2,9 @@
 #define RENDER_H
 
 #include <stdio.h>
-#include "geometry/vec.h"
-#include "scene.h"
-#include "camera.h"
+#include "math/vec.h"
+#include "scene/scene.h"
+#include "camera/camera.h"
 
 typedef struct Color {
     double r;
@@ -25,7 +25,7 @@ typedef struct RenderSettings {
     int aa_samples;
 } RenderSettings;
 
-Pixel pixel(unsigned char r, unsigned char g, unsigned char b);
+Pixel create_pixel(unsigned char r, unsigned char g, unsigned char b);
 Pixel color_to_pixel(Vec c);
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings);

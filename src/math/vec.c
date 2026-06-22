@@ -1,5 +1,5 @@
 #include "math.h"
-#include "geometry/vec.h"
+#include "math/vec.h"
 
 Vec vec(double x, double y, double z) {
     return (Vec) {

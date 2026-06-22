@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <math.h>
-#include "graphics/render.h"
-#include "scene.h"
+#include "render/render.h"
+#include "render/trace.h"
+#include "scene/scene.h"
 #include "geometry/object.h"
-#include "graphics/trace.h"
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     unsigned char *pa, *pp;
@@ -12,7 +12,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     size_t count;
     Pixel p;
     Vec c;
-    Line ray;
+    Ray ray;
 
     fprintf(f, "P6\n");
     fprintf(f, "%d %d\n", settings->width, settings->height);
@@ -41,7 +41,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
                     aa_right = (aa_j + 0.5) * inv_samples;
                     right = (-1.0 + (j + aa_right) * inv_width * 2.0) * x_scale;
 
-                    ray = create_line(
+                    ray = create_ray(
                         cam->position,
                         normalize(v_add(
                             cam->forward,
@@ -61,32 +61,6 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
             *pp++ = p.b;
         }
     }
-
-    // for (i = 0; i < height; i++) {
-    //     up = (1.0 - (i + 0.5) / height * 2.0) * fov_scale;
-    //     for (j = 0; j < width; j++) {
-    //         right = (-1.0 + (j + 0.5) / width * 2.0) * aspect * fov_scale;
-
-    //         ray = create_line(
-    //             cam->position,
-    //             normalize(v_add(
-    //                 cam->forward,
-    //                 v_add(
-    //                     scale(cam->right, right), 
-    //                     scale(cam->up, up)
-    //                 )
-    //             ))
-    //         );
-
-    //         c = trace_ray(&ray, scene, cam, 3);
-
-    //         p = color_to_pixel(c);
-            
-    //         *pp++ = p.r;
-    //         *pp++ = p.g;
-    //         *pp++ = p.b;
-    //     }
-    // }
 
     fwrite(pa, sizeof(char), count, f);
     

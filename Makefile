@@ -2,15 +2,18 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -Iinclude
 
 SRC = 	main.c \
-		src/geometry/mesh/box.c \
-		src/geometry/mesh/rectangle.c \
-		src/geometry/object.c \
-		src/geometry/vec.c \
-		src/graphics/pixel.c \
-		src/graphics/render.c \
-		src/graphics/trace.c \
-		src/camera.c \
-		src/scene.c \
+		src/camera/camera.c \
+		src/geometry/aabb.c \
+		src/geometry/box.c \
+		src/geometry/plane.c \
+		src/geometry/sphere.c \
+		src/geometry/triangle.c \
+		src/math/vec.c \
+		src/math/ray.c \
+		src/render/pixel.c \
+		src/render/render.c \
+		src/render/trace.c \
+		src/scene/scene.c \
 
 OUT = app
 

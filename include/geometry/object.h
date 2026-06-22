@@ -1,39 +1,13 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#include "vec.h"
-#include "graphics/light.h"
+#include "light/material.h"
+#include "math/ray.h"
+#include "geometry/hit.h"
 #include "geometry/aabb.h"
-#include "graphics/hitresult.h"
-
-typedef struct Line {
-    Vec o;
-    Vec v;
-} Line;
-
-typedef struct Sphere {
-    Vec o;
-    double r;
-} Sphere;
-
-typedef struct Plane {
-    Vec o;
-    Vec n;
-    Material *m;
-} Plane;
-
-typedef struct Triangle {
-    Vec a;
-    Vec b;
-    Vec c;
-    Vec n;
-} Triangle;
-
-typedef struct Box {
-    Vec center;
-    Vec axes[3];
-    Vec half_size;
-} Box;
+#include "geometry/sphere.h"
+#include "geometry/triangle.h"
+#include "geometry/box.h"
 
 typedef struct Object {
     union {
@@ -43,13 +17,17 @@ typedef struct Object {
     } type;
     AABB aabb;
     Material *m;
-    double (*get_ray_intersection)(struct Object *, Line *);
-    HitResult (*get_hit_result)(Line *, struct Object *, double);
+    double (*get_ray_intersection)(struct Object *, Ray *);
+    HitResult (*get_hit_result)(Ray *, struct Object *, double);
 } Object;
 
+double sphere_ray_intersection(Object *object, Ray *ray);
+HitResult get_sphere_result(Ray *ray, Object *object, double t);
 
-Line create_line(Vec o, Vec v);
-Line line_from_origo(double x, double y, double z);
-void move_triangle(Triangle *triangle, Vec v);
+double triangle_ray_intersection(Object *object, Ray *ray);
+HitResult get_triangle_result(Ray *ray, Object *object, double t);
+
+double box_ray_intersection(Object *object, Ray *ray);
+HitResult get_box_result(Ray *ray, Object *object, double t);
 
 #endif

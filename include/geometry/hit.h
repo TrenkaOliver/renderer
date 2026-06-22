@@ -1,8 +1,8 @@
-#ifndef HITRESULT_H
-#define HITRESULT_H
+#ifndef HIT_H
+#define HIT_H
 
-#include "geometry/vec.h"
-#include "light.h"
+#include "math/vec.h"
+#include "light/material.h"
 
 typedef struct HitResult {
     Vec point;

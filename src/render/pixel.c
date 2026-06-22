@@ -1,9 +1,9 @@
 #include <math.h>
 
-#include "graphics/render.h"
-#include "geometry/vec.h"
+#include "render/render.h"
+#include "math/vec.h"
 
-Pixel pixel(unsigned char r, unsigned char g, unsigned char b) {
+Pixel create_pixel(unsigned char r, unsigned char g, unsigned char b) {
     return (Pixel) {
         .r = r, 
         .g = g, 

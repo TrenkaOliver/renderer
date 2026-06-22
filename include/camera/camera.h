@@ -1,8 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "geometry/vec.h"
-#include "geometry/object.h"
+#include "math/vec.h"
 
 typedef struct Camera {
     Vec position;

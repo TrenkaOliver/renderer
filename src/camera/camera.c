@@ -1,4 +1,4 @@
-#include "camera.h"
+#include "camera/camera.h"
 #include "math.h"
 
 Vec WORLD_UP = {.x = 0.0, .y = 0.0, .z = 1.0};

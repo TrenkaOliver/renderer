@@ -1,0 +1,14 @@
+#include <math.h>
+#include "geometry/plane.h"
+
+#define EPSILON 1e-8
+
+double plane_ray_intersection(Plane *plane, Ray *ray) {
+    double denom, t;
+
+    denom = dot(plane->n, ray->v);
+    if (fabs(denom) < EPSILON) return NAN;
+    
+    t = dot(plane->n, v_sub(plane->o, ray->o)) / denom;
+    return t < 0.0 ? NAN : t;
+}
