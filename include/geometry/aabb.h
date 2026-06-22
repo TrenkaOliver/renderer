@@ -9,6 +9,9 @@ typedef struct AABB {
     Vec max;
 } AABB;
 
+AABB aabb_merge(AABB a, AABB b);
+Vec calc_centroid(AABB aabb);
+
 double aabb_ray_intersection(AABB *aabb, Ray *ray);
 
 #endif

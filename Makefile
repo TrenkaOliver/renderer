@@ -2,6 +2,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3 -Iinclude
 
 SRC = 	main.c \
+		src/accel/bvh.c \
+		src/accel/cmp.c \
 		src/camera/camera.c \
 		src/geometry/aabb.c \
 		src/geometry/box.c \

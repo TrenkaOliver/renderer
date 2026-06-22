@@ -1,6 +1,17 @@
 #include <math.h>
 #include "geometry/aabb.h"
 
+AABB aabb_merge(AABB a, AABB b) {
+    return (AABB){
+        .min = v_min(a.min, b.min),
+        .max = v_max(a.max, b.max),
+    };
+}
+
+Vec calc_centroid(AABB aabb) {
+    return scale(v_add(aabb.min, aabb.max), 0.5);
+}
+
 double aabb_ray_intersection(AABB *aabb, Ray *ray) {
     Vec inv_v, t0, t1, t_min, t_max;
     double t_enter, t_exit;

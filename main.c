@@ -43,14 +43,14 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 1280;
-    int height = 720;
+    int width = 2560;
+    int height = 1440;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
-    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 1};
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 1};
     Camera cam = create_look_at_camera(
         vec(0.0, -250.0, 250.0),
         vec(0.0, 300.0, 100.0),

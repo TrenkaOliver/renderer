@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <math.h>
+#include "accel/bvh.h"
+#include "geometry/object.h"
 #include "render/render.h"
 #include "render/trace.h"
 #include "scene/scene.h"
-#include "geometry/object.h"
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     unsigned char *pa, *pp;
@@ -13,6 +14,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     Pixel p;
     Vec c;
     Ray ray;
+    BVH bvh;
 
     fprintf(f, "P6\n");
     fprintf(f, "%d %d\n", settings->width, settings->height);
@@ -30,8 +32,9 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
+    bvh = create_bvh(scene->objects.ptr, scene->objects.count);
+
     for (i = 0; i < settings->height; i++) {
-        printf("row: %d\n", i);
         for (j = 0; j < settings->width; j++) {
             c = vec(0.0, 0.0, 0.0);            
             for (aa_i = 0; aa_i < settings->aa_samples; aa_i++) {
@@ -52,7 +55,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
                         ))
                     );
 
-                    c = v_add(c, scale(trace_ray(&ray, scene, cam, settings->max_depth), color_scale));
+                    c = v_add(c, scale(trace_ray(&ray, scene, cam, &bvh, settings->max_depth), color_scale));
                 }
             }
             p = color_to_pixel(c);

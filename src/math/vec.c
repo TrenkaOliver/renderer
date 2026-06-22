@@ -17,6 +17,22 @@ double len(Vec vec) {
     return sqrt(len_sqr(vec));
 }
 
+Vec v_min(Vec a, Vec b) {
+    return (Vec){
+        .x = fmin(a.x, b.x),
+        .y = fmin(a.y, b.y),
+        .z = fmin(a.z, b.z),
+    };
+}
+
+Vec v_max(Vec a, Vec b) {
+    return (Vec){
+        .x = fmax(a.x, b.x),
+        .y = fmax(a.y, b.y),
+        .z = fmax(a.z, b.z),
+    };
+}
+
 Vec neg(Vec vec) {
     return scale(vec, -1);
 }

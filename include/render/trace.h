@@ -7,11 +7,12 @@
 #include "geometry/hit.h"
 #include "scene/scene.h"
 #include "camera/camera.h"
+#include "accel/bvh.h"
 
 HitResult get_first_plane(Ray *ray, Planes *planes);
-HitResult get_first_object(Ray *ray, Objects *objects);
-HitResult get_first_hit(Ray *ray, Scene *scene);
+HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh);
+HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh);
 
-Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, int depth);
+Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth);
 
 #endif
