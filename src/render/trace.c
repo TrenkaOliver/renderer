@@ -29,6 +29,16 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
     return (HitResult){.point = p, .normal = plane->n, .t = t, .material = plane->m};
 }
 
+int is_shaded_by_plane(Ray *ray, Planes *planes) {
+    int i;
+    Plane *plane;
+
+    for (i = 0; i < planes->count; i++)
+        if (!isnan(plane_ray_intersection(planes->pp + i, ray))) return 1;
+
+    return 0;
+}
+
 HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
     int sp, i;
     double t_left, t_right, t_near, t_far, t, t_min;
@@ -40,11 +50,10 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
     sp = 0;
     stack[sp++] = bvh->root;
 
+    if (isnan(aabb_ray_intersection(&bvh->root->aabb, ray))) return (HitResult){.t = NAN};
+
     while (sp) {
         n = stack[--sp];
-
-        t = aabb_ray_intersection(&n->aabb, ray);
-        if (isnan(t) || t > t_min) continue;
 
         if (n->first_primitive) {
             for (i = 0; i < n->primitive_count; i++) {
@@ -87,6 +96,34 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
         return closest->get_hit_result(ray, closest, t_min);
 }
 
+int is_shaded_by_object(Ray *ray, Objects *objects, BVH *bvh) {
+    int sp, i;
+    Object *object;
+    BVHNode *stack[128], *n;
+
+    sp = 0;
+    stack[sp++] = bvh->root;
+
+    while (sp) {
+        n = stack[--sp];
+
+        if (isnan(aabb_ray_intersection(&n->aabb, ray))) continue;
+
+        if (n->first_primitive) {
+            for (i = 0; i < n->primitive_count; i++) {
+                object = n->first_primitive[i];
+                if (!isnan(object->get_ray_intersection(object, ray))) return 1;
+            }
+            continue;
+        }
+
+        stack[sp++] = n->left;
+        stack[sp++] = n->right;
+    }
+
+    return 0;
+}
+
 HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     HitResult plane_result, object_result;
 
@@ -99,9 +136,16 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     return object_result.t < plane_result.t ? object_result : plane_result;
 }
 
+int is_shaded(Ray *ray, Scene *scene, BVH *bvh) {
+    return  is_shaded_by_plane(ray, &scene->planes) ||
+            is_shaded_by_object(ray, &scene->objects, bvh);
+}
+
+
+
 Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
     Ray shadow_ray, reflection_ray;
-    HitResult hit, shadow_hit;
+    HitResult hit;
     Vec light_reflection, ray_reflection;
     Vec c, c_local, c_reflected, c_diffuse, c_specular, c_ambient;
     double intensity;
@@ -112,12 +156,11 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
         return vec(0.0, 0.0, 0.0);
     } else {
         shadow_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), neg(scene->dir_light.direction));
-        shadow_hit = get_first_hit(&shadow_ray, scene, bvh);
         
         intensity = dot(hit.normal, neg(scene->dir_light.direction));
         light_reflection = normalize(v_sub(scene->dir_light.direction, scale(hit.normal, 2 * dot(hit.normal, scene->dir_light.direction))));
 
-        if (!isnan(shadow_hit.t) || intensity < 0) {
+        if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0) {
             c_diffuse = vec(0.0, 0.0, 0.0);
             c_specular = vec(0.0, 0.0, 0.0);
         }
