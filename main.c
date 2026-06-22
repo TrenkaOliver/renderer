@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include "graphics/render.h"
 #include "graphics/light.h"
 #include "scene.h"
@@ -14,10 +15,10 @@ Material blue = {
 };
 
 Material mirror = {
-    .diffuse = {.x = 0.7, .y = 0.7, .z = 1.0},
+    .diffuse = {.x = 0.85, .y = 0.85, .z = 0.85},
     .specular = {.x = 0.4, .y = 0.4, .z = 0.4},
     .shininess = 32.0,
-    .reflectivity = 0.5,
+    .reflectivity = 0.6,
 };
 
 Material white = {
@@ -41,26 +42,52 @@ Material green = {
 };
 
 int main() {
-    int width = 2560;
-    int height = 1440;
+    clock_t start = clock();
+
+    int width = 1280;
+    int height = 720;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
-    Camera cam = create_look_at_camera(vec(0.0, 0.0, 125.0), vec(0.0, 1.0, 125.0), 1.0472);
-    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 3};
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 1};
+    Camera cam = create_look_at_camera(
+        vec(0.0, -250.0, 250.0),
+        vec(0.0, 300.0, 100.0),
+        1.0472
+    );
 
-    add_sphere(&scene, vec(0.0, 300.0, 125.0), 25.0, &mirror);
+    for (int x = -300; x <= 300; x += 60) {
+        for (int y = 0; y <= 1200; y += 60) {
+            for (int z = 20; z <= 260; z += 60) {
 
-    add_box(&scene, vec(0.0, 300.0, 0.0), vec(0.0, 0.0, 0.0), vec(10.0, 10.0, 500.0), &green);
+                int idx = ((x + 300) / 60)
+                        + ((y      ) / 60)
+                        + ((z - 20 ) / 60);
 
-    add_box(&scene, vec(-110.0, 500.0, 150.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &blue);
-
-    add_box(&scene, vec(110.0, 500.0, 150.0), vec(0.0, 0.0, 0.0), vec(10.0, 1000.0, 300.0), &orange);
+                if (idx % 2 == 0) {
+                    add_sphere(
+                        &scene,
+                        vec(x, y, z),
+                        15.0,
+                        (idx % 4 == 0) ? &mirror : &blue
+                    );
+                } else {
+                    add_box(
+                        &scene,
+                        vec(x - 12.0, y - 12.0, z - 12.0),
+                        vec(0.0, 0.0, 0.0),
+                        vec(24.0, 24.0, 24.0),
+                        &orange
+                    );
+                }
+            }
+        }
+    }
 
     add_plane(
-        &scene, 
+        &scene,
         vec(0.0, 0.0, 0.0),
         vec(0.0, 0.0, 1.0),
         &white
@@ -69,4 +96,8 @@ int main() {
 
     render(f, &scene, &cam, &settings);
     fclose(f);
+
+    clock_t end = clock();
+
+    printf("Time: %.3f s\n", (double)(end - start) / CLOCKS_PER_SEC);
 }

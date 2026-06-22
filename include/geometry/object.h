@@ -4,6 +4,7 @@
 #include "vec.h"
 #include "graphics/light.h"
 #include "geometry/aabb.h"
+#include "graphics/hitresult.h"
 
 typedef struct Line {
     Vec o;
@@ -13,8 +14,6 @@ typedef struct Line {
 typedef struct Sphere {
     Vec o;
     double r;
-    AABB aabb;
-    Material *m;
 } Sphere;
 
 typedef struct Plane {
@@ -28,17 +27,26 @@ typedef struct Triangle {
     Vec b;
     Vec c;
     Vec n;
-    AABB aabb;
-    Material *m;
 } Triangle;
 
 typedef struct Box {
     Vec center;
     Vec axes[3];
     Vec half_size;
+} Box;
+
+typedef struct Object {
+    union {
+        Sphere sphere;
+        Triangle triangle;
+        Box box;
+    } type;
     AABB aabb;
     Material *m;
-} Box;
+    double (*get_ray_intersection)(struct Object *, Line *);
+    HitResult (*get_hit_result)(Line *, struct Object *, double);
+} Object;
+
 
 Line create_line(Vec o, Vec v);
 Line line_from_origo(double x, double y, double z);

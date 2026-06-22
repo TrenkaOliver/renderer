@@ -7,27 +7,30 @@
 #include "geometry/object.h"
 #include "geometry/aabb.h"
 #include "graphics/light.h"
+#include "hitresult.h"
 #include "scene.h"
 #include "camera.h"
 
-typedef struct HitResult {
-    Vec point;
-    Vec normal;
-    double t;
-    Material *material;
-} HitResult;
+
 
 // returns smallest t in front of camera
-double sphere_ray_intersection(Sphere *sphere, Line *ray);
 double plane_ray_intersection(Plane *plane, Line *ray);
-double triangle_ray_intersection(Triangle *triangle, Line *ray);
 double aabb_ray_intersection(AABB *aabb, Line *ray);
-double box_ray_intersection(Box *box, Line *ray);
 
-HitResult get_first_sphere(Line *ray, Spheres *spheres);
+double sphere_ray_intersection(Object *object, Line *ray);
+double triangle_ray_intersection(Object *object, Line *ray);
+double box_ray_intersection(Object *object, Line *ray);
+
 HitResult get_first_plane(Line *ray, Planes *planes);
-HitResult get_first_triangle(Line *ray, Triangles *triangles);
-HitResult get_first_box(Line *ray, Boxes *boxes);
+
+HitResult get_sphere_result(Line *ray, Object *object, double t);
+HitResult get_triangle_result(Line *ray, Object *object, double t);
+HitResult get_box_result(Line *ray, Object *object, double t);
+HitResult get_first_object(Line *ray, Objects *objects);
+
+// HitResult get_first_sphere(Line *ray, Spheres *spheres);
+// HitResult get_first_triangle(Line *ray, Triangles *triangles);
+// HitResult get_first_box(Line *ray, Boxes *boxes);
 
 HitResult get_first_hit(Line *ray, Scene *scene);
 

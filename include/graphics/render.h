@@ -1,3 +1,6 @@
+#ifndef RENDER_H
+#define RENDER_H
+
 #include <stdio.h>
 #include "geometry/vec.h"
 #include "scene.h"
@@ -26,3 +29,5 @@ Pixel pixel(unsigned char r, unsigned char g, unsigned char b);
 Pixel color_to_pixel(Vec c);
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings);
+
+#endif

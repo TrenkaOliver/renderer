@@ -15,30 +15,6 @@ Line line_from_origo(double x, double y, double z) {
     };
 }
 
-// Sphere create_sphere(Vec o, double r, Material m) {
-//     return (Sphere) {
-//         .o = o,
-//         .r = r,
-//         .m = m,
-//     };
-// }
-
-// Plane create_plane(Vec o, Vec n, Material m) {
-//     return (Plane) {
-//         .o = o,
-//         .n = normalize(n),
-//         .m = m,
-//     };
-// }
-
-// Triangle create_triangle(Vec a, Vec b, Vec c, Material m) {
-//     return (Triangle) {
-//         .a = a,
-//         .b = b,
-//         .c = c,
-//         .m = m,
-//     };
-// }
 
 void move_triangle(Triangle *triangle, Vec v) {
     triangle->a = v_add(triangle->a, v);

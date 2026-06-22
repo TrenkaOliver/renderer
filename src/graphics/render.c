@@ -31,6 +31,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_samples = 1.0 / settings->aa_samples;
 
     for (i = 0; i < settings->height; i++) {
+        printf("row: %d\n", i);
         for (j = 0; j < settings->width; j++) {
             c = vec(0.0, 0.0, 0.0);            
             for (aa_i = 0; aa_i < settings->aa_samples; aa_i++) {
