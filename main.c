@@ -50,7 +50,7 @@ int main() {
     if (!f) return 1;
 
     Scene scene = create_scene();
-    RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 1};
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 1};
     Camera cam = create_look_at_camera(
         vec(0.0, -250.0, 250.0),
         vec(0.0, 300.0, 100.0),
