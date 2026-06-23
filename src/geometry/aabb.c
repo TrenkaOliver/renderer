@@ -27,7 +27,7 @@ double aabb_ray_intersection(AABB *aabb, Ray *ray) {
     t_min = fmax(t_min, fmin(ty0, ty1));
     t_max = fmin(t_max, fmax(ty0, ty1));
 
-    if (t_min > t_max) return NAN;
+    if (t_min > t_max) return -1.0;
     
     tz0 = (aabb->min.z - ray->o.z) * ray->inv_v.z;
     tz1 = (aabb->max.z - ray->o.z) * ray->inv_v.z;
@@ -35,7 +35,7 @@ double aabb_ray_intersection(AABB *aabb, Ray *ray) {
     t_min = fmax(t_min, fmin(tz0, tz1));
     t_max = fmin(t_max, fmax(tz0, tz1));
 
-    if (t_min > t_max || t_max < 0.0) return NAN;
+    if (t_min > t_max || t_max < 0.0) return -1.0;
 
     return t_min >= 0.0 ? t_min : t_max;
 }

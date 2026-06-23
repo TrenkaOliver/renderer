@@ -16,13 +16,13 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
     
     for (i = 0; i < planes->count; i++) {
         tc = plane_ray_intersection(planes->pp + i, ray);
-        if (tc < t) {
+        if (tc >= 0.0 && tc < t) {
             plane = planes->pp + i;
             t = tc;
         }
     }
 
-    if (!plane) return (HitResult){.point = vec(0.0, 0.0, 0.0), .normal = vec(0.0, 0.0, 0.0), .t = NAN};
+    if (!plane) return (HitResult){.point = vec(0.0, 0.0, 0.0), .normal = vec(0.0, 0.0, 0.0), .t = -1.0};
 
     Vec p = v_add(ray->o, scale(ray->v, t));
 
@@ -34,7 +34,7 @@ int is_shaded_by_plane(Ray *ray, Planes *planes) {
     Plane *plane;
 
     for (i = 0; i < planes->count; i++)
-        if (!isnan(plane_ray_intersection(planes->pp + i, ray))) return 1;
+        if (plane_ray_intersection(planes->pp + i, ray) >= 0.0) return 1;
 
     return 0;
 }
@@ -50,7 +50,7 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
     sp = 0;
     stack[sp++] = bvh->root;
 
-    if (isnan(aabb_ray_intersection(&bvh->root->aabb, ray))) return (HitResult){.t = NAN};
+    if (aabb_ray_intersection(&bvh->root->aabb, ray) < 0.0) return (HitResult){.t = -1.0};
 
     while (sp) {
         n = stack[--sp];
@@ -59,7 +59,7 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
             for (i = 0; i < n->primitive_count; i++) {
                 object = n->first_primitive[i];
                 t = object->get_ray_intersection(object, ray);
-                if (t < t_min) {
+                if (t >= 0.0 && t < t_min) {
                     closest = object;
                     t_min = t;
                 }
@@ -82,16 +82,16 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
             t_far = t_left;
         }
 
-        if (t_far < t_min)
+        if (t_far > 0.0 && t_far < t_min)
             stack[sp++] = far;
 
-        if (t_near < t_min)
+        if (t_near > 0.0 && t_near < t_min)
             stack[sp++] = near;
 
     }
 
     if (!closest)
-        return (HitResult){.t = NAN};
+        return (HitResult){.t = -1.0};
     else
         return closest->get_hit_result(ray, closest, t_min);
 }
@@ -107,12 +107,12 @@ int is_shaded_by_object(Ray *ray, Objects *objects, BVH *bvh) {
     while (sp) {
         n = stack[--sp];
 
-        if (isnan(aabb_ray_intersection(&n->aabb, ray))) continue;
+        if (aabb_ray_intersection(&n->aabb, ray) < 0.0) continue;
 
         if (n->first_primitive) {
             for (i = 0; i < n->primitive_count; i++) {
                 object = n->first_primitive[i];
-                if (!isnan(object->get_ray_intersection(object, ray))) return 1;
+                if (object->get_ray_intersection(object, ray) >= 0.0) return 1;
             }
             continue;
         }
@@ -130,8 +130,8 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     plane_result = get_first_plane(ray, &scene->planes);
     object_result = get_first_object(ray, &scene->objects, bvh);
 
-    if(isnan(plane_result.t)) return object_result;
-    if(isnan(object_result.t)) return plane_result;
+    if(plane_result.t < 0.0) return object_result;
+    if(object_result.t < 0.0) return plane_result;
 
     return object_result.t < plane_result.t ? object_result : plane_result;
 }
@@ -152,7 +152,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
 
     hit = get_first_hit(ray, scene, bvh);
 
-    if (isnan(hit.t)) {
+    if (hit.t < 0.0) {
         return vec(0.0, 0.0, 0.0);
     } else {
         shadow_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), neg(scene->dir_light.direction));

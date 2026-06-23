@@ -13,7 +13,7 @@ double sphere_ray_intersection(Object *object, Ray *ray) {
 
     d = b * b - 4 * a * c;
 
-    if (d < 0.0) return NAN;
+    if (d < 0.0) return -1.0;
 
     t1 = (-b + sqrt(d)) / (2.0 * a);
     t2 = (-b - sqrt(d)) / (2.0 * a);
@@ -23,7 +23,7 @@ double sphere_ray_intersection(Object *object, Ray *ray) {
     if (t1 > 0.0 && t1 < t) t = t1;
     if (t2 > 0.0 && t2 < t) t = t2;
 
-    if (t == INFINITY) return NAN;
+    if (t == INFINITY) return -1.0;
 
     return t;
 }

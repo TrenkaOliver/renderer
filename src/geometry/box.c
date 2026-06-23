@@ -20,7 +20,7 @@ double box_ray_intersection(Object *object, Ray *ray) {
 
         if (fabs(f) < EPSILON) {
             if (fabs(e) > h)
-                return NAN;
+                return -1.0;
             else
                 continue;
         }
@@ -37,10 +37,10 @@ double box_ray_intersection(Object *object, Ray *ray) {
         t_min = fmax(t1, t_min);
         t_max = fmin(t2, t_max);
 
-        if (t_min > t_max) return NAN;
+        if (t_min > t_max) return -1.0;
     }
 
-    if (t_max < 0.0) return NAN;
+    if (t_max < 0.0) return -1.0;
     
     return t_min >= 0.0 ? t_min : t_max;
 }

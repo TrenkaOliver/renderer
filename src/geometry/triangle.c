@@ -12,17 +12,17 @@ double triangle_ray_intersection(Object *object, Ray *ray) {
     ao = v_sub(ray->o, object->type.triangle.a);
 
     denom = dot(ab, cross(ray->v, ac));
-    if (fabs(denom) < EPSILON) return NAN;
+    if (fabs(denom) < EPSILON) return -1.0;
 
     u = dot(ao, cross(ray->v, ac)) / denom;
-    if (u < 0.0) return NAN;
+    if (u < 0.0) return -1.0;
 
     v = dot(ray->v, cross(ao, ab)) / denom;
-    if (v < 0.0) return NAN;
+    if (v < 0.0) return -1.0;
 
-    if (u + v > 1.0) return NAN;
+    if (u + v > 1.0) return -1.0;
 
     t = dot(ac, cross(ao, ab)) / denom;
     
-    return t < 0.0 ? NAN : t;
+    return t;
 }
