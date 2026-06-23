@@ -13,31 +13,29 @@ Vec calc_centroid(AABB aabb) {
 }
 
 double aabb_ray_intersection(AABB *aabb, Ray *ray) {
-    Vec inv_v, t0, t1, t_min, t_max;
-    double t_enter, t_exit;
+    double tx0, tx1, ty0, ty1, tz0, tz1, t_min, t_max;
 
-    inv_v = vec(1.0 / ray->v.x, 1.0 / ray->v.y, 1.0 / ray->v.z);
+    tx0 = (aabb->min.x - ray->o.x) * ray->inv_v.x;
+    tx1 = (aabb->max.x - ray->o.x) * ray->inv_v.x;
 
-    t0 = hadamard(v_sub(aabb->min, ray->o), inv_v);
-    t1 = hadamard(v_sub(aabb->max, ray->o), inv_v);
+    t_min = fmin(tx0, tx1);
+    t_max = fmax(tx0, tx1);
 
-    t_min = vec(
-        fmin(t0.x, t1.x),
-        fmin(t0.y, t1.y),
-        fmin(t0.z, t1.z)
-    );
+    ty0 = (aabb->min.y - ray->o.y) * ray->inv_v.y;
+    ty1 = (aabb->max.y - ray->o.y) * ray->inv_v.y;
 
-    t_max = vec(
-        fmax(t0.x, t1.x),
-        fmax(t0.y, t1.y),
-        fmax(t0.z, t1.z)
-    );
+    t_min = fmax(t_min, fmin(ty0, ty1));
+    t_max = fmin(t_max, fmax(ty0, ty1));
 
-    t_enter = fmax(t_min.x, fmax(t_min.y, t_min.z));
-    t_exit = fmin(t_max.x, fmin(t_max.y, t_max.z));
+    if (t_min > t_max) return NAN;
+    
+    tz0 = (aabb->min.z - ray->o.z) * ray->inv_v.z;
+    tz1 = (aabb->max.z - ray->o.z) * ray->inv_v.z;
 
-    if (t_exit < t_enter || t_exit < 0.0)
-        return NAN;
-    else
-        return t_enter >= 0.0 ? t_enter : t_exit;
+    t_min = fmax(t_min, fmin(tz0, tz1));
+    t_max = fmin(t_max, fmax(tz0, tz1));
+
+    if (t_min > t_max || t_max < 0.0) return NAN;
+
+    return t_min >= 0.0 ? t_min : t_max;
 }

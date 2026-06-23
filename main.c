@@ -43,8 +43,8 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 2560;
-    int height = 1440;
+    int width = 1280;
+    int height = 720;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;

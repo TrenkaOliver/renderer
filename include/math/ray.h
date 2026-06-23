@@ -6,6 +6,7 @@
 typedef struct Ray {
     Vec o;
     Vec v;
+    Vec inv_v;
 } Ray;
 
 Ray create_ray(Vec o, Vec v);
