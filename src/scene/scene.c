@@ -32,6 +32,9 @@ Scene create_scene() {
         .intensity = 1,
     };
 
+    scene.dir_light.neg_dir = neg(scene.dir_light.direction);
+    scene.dir_light.scaled_color = scale(scene.dir_light.color, scene.dir_light.intensity);
+
     scene.global_ambient = vec(0.33, 0.33, 0.33);
 
     return scene;

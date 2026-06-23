@@ -12,8 +12,8 @@
 HitResult get_first_plane(Ray *ray, Planes *planes);
 int is_shaded_by_plane(Ray *ray, Planes *planes);
 
-HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh);
-int is_shaded_by_object(Ray *ray, Objects *objects, BVH *bvh);
+HitResult get_first_object(Ray *ray, BVH *bvh);
+int is_shaded_by_object(Ray *ray, BVH *bvh);
 
 HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh);
 int is_shaded(Ray *ray, Scene *scene, BVH *bvh);

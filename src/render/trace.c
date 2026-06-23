@@ -31,7 +31,6 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
 
 int is_shaded_by_plane(Ray *ray, Planes *planes) {
     int i;
-    Plane *plane;
 
     for (i = 0; i < planes->count; i++)
         if (plane_ray_intersection(planes->pp + i, ray) >= 0.0) return 1;
@@ -39,7 +38,7 @@ int is_shaded_by_plane(Ray *ray, Planes *planes) {
     return 0;
 }
 
-HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
+HitResult get_first_object(Ray *ray, BVH *bvh) {
     int sp, i;
     double t_left, t_right, t_near, t_far, t, t_min;
     Object *object, *closest;
@@ -96,7 +95,7 @@ HitResult get_first_object(Ray *ray, Objects *objects, BVH *bvh) {
         return closest->get_hit_result(ray, closest, t_min);
 }
 
-int is_shaded_by_object(Ray *ray, Objects *objects, BVH *bvh) {
+int is_shaded_by_object(Ray *ray, BVH *bvh) {
     int sp, i;
     Object *object;
     BVHNode *stack[128], *n;
@@ -128,7 +127,7 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     HitResult plane_result, object_result;
 
     plane_result = get_first_plane(ray, &scene->planes);
-    object_result = get_first_object(ray, &scene->objects, bvh);
+    object_result = get_first_object(ray, bvh);
 
     if(plane_result.t < 0.0) return object_result;
     if(object_result.t < 0.0) return plane_result;
@@ -138,7 +137,7 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
 
 int is_shaded(Ray *ray, Scene *scene, BVH *bvh) {
     return  is_shaded_by_plane(ray, &scene->planes) ||
-            is_shaded_by_object(ray, &scene->objects, bvh);
+            is_shaded_by_object(ray, bvh);
 }
 
 
@@ -155,9 +154,9 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
     if (hit.t < 0.0) {
         return vec(0.0, 0.0, 0.0);
     } else {
-        shadow_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), neg(scene->dir_light.direction));
+        shadow_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), scene->dir_light.neg_dir);
         
-        intensity = dot(hit.normal, neg(scene->dir_light.direction));
+        intensity = dot(hit.normal, scene->dir_light.neg_dir);
         light_reflection = normalize(v_sub(scene->dir_light.direction, scale(hit.normal, 2 * dot(hit.normal, scene->dir_light.direction))));
 
         if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0) {
@@ -168,7 +167,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
             c_diffuse = 
             scale(
                 hadamard(
-                    scale(scene->dir_light.color, scene->dir_light.intensity), 
+                    scene->dir_light.scaled_color, 
                     hit.material->diffuse
                 ),
                 intensity
@@ -177,7 +176,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
             c_specular = 
             scale(
                 hadamard(
-                    scale(scene->dir_light.color, scene->dir_light.intensity),
+                    scene->dir_light.scaled_color,
                     hit.material->specular
                 ), 
                 pow(

@@ -5,6 +5,8 @@
 
 typedef struct DirectionalLight {
     Vec direction;
+    Vec neg_dir;
+    Vec scaled_color;
     Vec color;
     double intensity;
 } DirectionalLight;
