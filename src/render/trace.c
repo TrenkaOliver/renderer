@@ -15,9 +15,9 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
     plane = NULL;
     
     for (i = 0; i < planes->count; i++) {
-        tc = plane_ray_intersection(planes->pp + i, ray);
+        tc = plane_ray_intersection(planes->ptr + i, ray);
         if (tc >= 0.0 && tc < t) {
-            plane = planes->pp + i;
+            plane = planes->ptr + i;
             t = tc;
         }
     }
@@ -33,7 +33,7 @@ int is_shaded_by_plane(Ray *ray, Planes *planes) {
     int i;
 
     for (i = 0; i < planes->count; i++)
-        if (plane_ray_intersection(planes->pp + i, ray) >= 0.0) return 1;
+        if (plane_ray_intersection(planes->ptr + i, ray) >= 0.0) return 1;
 
     return 0;
 }

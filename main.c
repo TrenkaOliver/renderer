@@ -43,54 +43,56 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 1280;
-    int height = 720;
+    int width = 2560;
+    int height = 1440;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
-    RenderSettings settings = {.width = width, .height = height, .max_depth = 3, .aa_samples = 1};
-    Camera cam = create_look_at_camera(
-        vec(0.0, -250.0, 250.0),
-        vec(0.0, 300.0, 100.0),
-        1.0472
-    );
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 3};
+    Camera cam = create_look_at_camera(vec(0.0, -25.0, 10.0), vec(0.0, 0.0, 10.0), 1.0472);
 
-    for (int x = -300; x <= 300; x += 60) {
-        for (int y = 0; y <= 1200; y += 60) {
-            for (int z = 20; z <= 260; z += 60) {
+    Mesh *mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
+    set_mesh_position(&scene, mesh, vec(0.0, 0.0, 0.0));
+    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
 
-                int idx = ((x + 300) / 60)
-                        + ((y      ) / 60)
-                        + ((z - 20 ) / 60);
+    printf("size: %f, %f, %f\n", mesh->size.x, mesh->size.y, mesh->size.z);
 
-                if (idx % 2 == 0) {
-                    add_sphere(
-                        &scene,
-                        vec(x, y, z),
-                        15.0,
-                        (idx % 4 == 0) ? &mirror : &blue
-                    );
-                } else {
-                    add_box(
-                        &scene,
-                        vec(x - 12.0, y - 12.0, z - 12.0),
-                        vec(0.0, 0.0, 0.0),
-                        vec(24.0, 24.0, 24.0),
-                        &orange
-                    );
-                }
-            }
-        }
-    }
+    // for (int x = -300; x <= 300; x += 60) {
+    //     for (int y = 0; y <= 1200; y += 60) {
+    //         for (int z = 20; z <= 260; z += 60) {
 
-    add_plane(
-        &scene,
-        vec(0.0, 0.0, 0.0),
-        vec(0.0, 0.0, 1.0),
-        &white
-    );
+    //             int idx = ((x + 300) / 60)
+    //                     + ((y      ) / 60)
+    //                     + ((z - 20 ) / 60);
+
+    //             if (idx % 2 == 0) {
+    //                 add_sphere(
+    //                     &scene,
+    //                     vec(x, y, z),
+    //                     15.0,
+    //                     (idx % 4 == 0) ? &mirror : &blue
+    //                 );
+    //             } else {
+    //                 add_box(
+    //                     &scene,
+    //                     vec(x - 12.0, y - 12.0, z - 12.0),
+    //                     vec(0.0, 0.0, 0.0),
+    //                     vec(24.0, 24.0, 24.0),
+    //                     &orange
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+
+    // add_plane(
+    //     &scene,
+    //     vec(0.0, 0.0, 0.0),
+    //     vec(0.0, 0.0, 1.0),
+    //     &white
+    // );
 
 
     render(f, &scene, &cam, &settings);

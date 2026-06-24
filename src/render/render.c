@@ -32,7 +32,11 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
+    printf("primitives are ready\n");
+
     bvh = create_bvh(scene->objects.ptr, scene->objects.count);
+
+    printf("bvh is ready\n");
 
     for (i = 0; i < settings->height; i++) {
         for (j = 0; j < settings->width; j++) {

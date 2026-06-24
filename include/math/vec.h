@@ -29,6 +29,10 @@ static inline Vec neg(Vec vec) {
     return (Vec){.x = -vec.x, .y = -vec.y, .z = -vec.z};
 }
 
+static inline Vec reciproc(Vec vec) {
+    return (Vec){.x = 1.0 / vec.x, .y = 1.0 / vec.y, .z = 1.0 / vec.z};
+}
+
 static inline Vec v_add(Vec a, Vec b) {
     return (Vec){.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
 }

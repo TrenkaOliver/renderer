@@ -1,21 +1,28 @@
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
+#include <ctype.h>
 
 #include "scene/scene.h"
 #include "light/light.h"
 #include "light/material.h"
 #include "render/trace.h"
-#include <stdio.h>
 
 Vec RIGHT = {.x = 1.0, .y = 0.0, .z = 0.0};
 Vec FORWARD = {.x = 0.0, .y = 1.0, .z = 0.0};
 Vec UP = {.x = 0.0, .y = 0.0, .z = 1.0};
 
+Material no_texture = {
+    .diffuse = {.x = 0.91, .y = 0.76, .z = 0.65},
+    .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
+    .shininess = 1,
+};
+
 Scene create_scene() {
     Scene scene;
 
     scene.planes = (Planes){
-        .pp = calloc(16, sizeof(Sphere)),
+        .ptr = calloc(16, sizeof(Sphere)),
         .count = 0,
         .capacity = 16,
     };
@@ -45,12 +52,12 @@ Plane *add_plane(Scene *scene, Vec o, Vec n, Material *m) {
 
     if (scene->planes.count == scene->planes.capacity) {
         scene->planes.capacity += 16;
-        scene->planes.pp = realloc(scene->planes.pp, scene->planes.capacity * sizeof(Plane));
+        scene->planes.ptr = realloc(scene->planes.ptr, scene->planes.capacity * sizeof(Plane));
     }
 
     if (dot(n, scene->dir_light.direction) > 0.0) n = neg(n);
 
-    *((ptr = scene->planes.pp + scene->planes.count++)) = (Plane){
+    *((ptr = scene->planes.ptr + scene->planes.count++)) = (Plane){
         .o = o,
         .n = n,
         .m = m
@@ -67,6 +74,16 @@ Object *add_object(Scene *scene) {
 
     return scene->objects.ptr + scene->objects.count++;
 }
+
+Mesh *add_mesh(Scene *scene) {
+    if (scene->meshes.count == scene->meshes.capacity) {
+        scene->meshes.capacity += 16;
+        scene->meshes.ptr = realloc(scene->meshes.ptr, scene->meshes.capacity * sizeof(Mesh));
+    }
+
+    return scene->meshes.ptr + scene->meshes.count++;
+}
+
 
 Object *add_sphere(Scene *scene, Vec o, double r, Material *m) {
     Object *ptr;
@@ -163,4 +180,145 @@ Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m)
     ptr->get_hit_result = get_box_result;
 
     return ptr;
+}
+
+void add_vertex(VertexArray *v_arr, Vec vertex) {
+    if (v_arr->count == v_arr->capacity) {
+        v_arr->capacity *= 2;
+        v_arr->vertices = realloc(v_arr->vertices, v_arr->capacity * sizeof(Vec));
+    }
+
+    v_arr->vertices[v_arr->count++] = vertex;
+}
+
+
+Mesh *inport_mesh(Scene *scene, char *file_name) {
+    FILE *f;
+    VertexArray v_arr;
+    Mesh *mesh;
+    AABB aabb;
+    Vec v;
+    size_t idx[64], count;
+    char line[128], *p;
+    long i;
+    
+    f = fopen(file_name, "r");
+    v_arr = (VertexArray){
+        .vertices = calloc(64, sizeof(Vec)),
+        .capacity = 64,
+        .count = 0,
+    };
+    
+    mesh = add_mesh(scene);
+    mesh->rotation = vec(0.0, 0.0, 0.0);
+    mesh->first_triangle = scene->objects.count;
+    mesh->triangle_count = 0;
+
+    aabb = (AABB){.min = vec(INFINITY, INFINITY, INFINITY), .max = vec(-INFINITY, -INFINITY, -INFINITY)};
+
+    while (fgets(line, 128, f)){
+        if (sscanf(line, "v %lf %lf %lf", &v.x, &v.y, &v.z) == 3) {
+            add_vertex(&v_arr, v);
+        } else if (line[0] == 'f' && line[1] == ' ') {
+            p = line + 2;
+            count = 0;
+
+            while(*p) {
+                while (isspace(*p)) p++;
+                if (!*p) break;
+
+                i = strtol(p, &p, 10);
+                idx[count++] = (i < 0) ? (size_t)(v_arr.count + i) : (size_t)(i - 1);
+
+                while(*p && !isspace(*p)) p++;
+                
+                if (count >= 64) break;
+            }
+
+            if (count < 3) continue;
+
+            for (i = 1; i < count - 1; i++) {
+                Object *t = add_triangle(scene, v_arr.vertices[idx[0]], v_arr.vertices[idx[i]], v_arr.vertices[idx[i + 1]], &no_texture);
+                aabb = aabb_merge(aabb, t->aabb);
+                mesh->triangle_count++;
+            }
+        }
+    }
+
+    mesh->position = aabb.min;
+    mesh->size = v_sub(aabb.max, aabb.min);
+    
+    free(v_arr.vertices);
+    return mesh;
+}
+
+void set_mesh_position(Scene *scene, Mesh *mesh, Vec position) {
+    size_t i, end;
+    Vec delta;
+
+    mesh->position = position;
+
+    delta = v_sub(position, mesh->position);
+
+    end = mesh->first_triangle + mesh->triangle_count;
+
+    for (i = mesh->first_triangle; i < end; i++) {
+        scene->objects.ptr[i].aabb.min = v_add(scene->objects.ptr[i].aabb.min, delta);
+        scene->objects.ptr[i].aabb.max = v_add(scene->objects.ptr[i].aabb.max, delta);
+        scene->objects.ptr[i].type.triangle.a = v_add(scene->objects.ptr[i].type.triangle.a, delta);
+        scene->objects.ptr[i].type.triangle.b = v_add(scene->objects.ptr[i].type.triangle.b, delta);
+        scene->objects.ptr[i].type.triangle.c = v_add(scene->objects.ptr[i].type.triangle.c, delta);
+    }
+}
+
+void set_mesh_size(Scene *scene, Mesh *mesh, Vec size) {
+    size_t i, end;
+    Vec delta, scaler;
+
+    scaler = hadamard(size, reciproc(mesh->size));
+    mesh->size = size;
+
+    end = mesh->first_triangle + mesh->triangle_count;
+    
+    for (i = mesh->first_triangle; i < end; i++) {
+        delta = v_sub(scene->objects.ptr[i].type.triangle.a, mesh->position);
+        scene->objects.ptr[i].type.triangle.a = v_add(mesh->position, hadamard(delta, scaler));
+
+        delta = v_sub(scene->objects.ptr[i].type.triangle.b, mesh->position);
+        scene->objects.ptr[i].type.triangle.b = v_add(mesh->position, hadamard(delta, scaler));
+
+        delta = v_sub(scene->objects.ptr[i].type.triangle.c, mesh->position);
+        scene->objects.ptr[i].type.triangle.c = v_add(mesh->position, hadamard(delta, scaler));
+
+        scene->objects.ptr[i].aabb = (AABB) {
+            .min = v_min(v_min(scene->objects.ptr[i].type.triangle.a, scene->objects.ptr[i].type.triangle.b), scene->objects.ptr[i].type.triangle.c),
+            .max = v_max(v_max(scene->objects.ptr[i].type.triangle.a, scene->objects.ptr[i].type.triangle.b), scene->objects.ptr[i].type.triangle.c)
+        };
+    }
+}
+
+void set_mesh_rotation(Scene *scene, Mesh *mesh, Vec rotation) {
+    size_t i, end;
+    Vec delta, r;
+
+    r = v_sub(rotation, mesh->rotation);
+    mesh->rotation = rotation;
+
+    end = mesh->first_triangle + mesh->triangle_count;
+
+    for (i = mesh->first_triangle; i < end; i++) {
+        delta = v_sub(scene->objects.ptr[i].type.triangle.a, mesh->position);
+        scene->objects.ptr[i].type.triangle.a = v_add(mesh->position, rotate(delta, r));
+
+        delta = v_sub(scene->objects.ptr[i].type.triangle.b, mesh->position);
+        scene->objects.ptr[i].type.triangle.b = v_add(mesh->position, rotate(delta, r));
+
+        delta = v_sub(scene->objects.ptr[i].type.triangle.c, mesh->position);
+        scene->objects.ptr[i].type.triangle.c = v_add(mesh->position, rotate(delta, r));
+
+        scene->objects.ptr[i].aabb = (AABB) {
+            .min = v_min(v_min(scene->objects.ptr[i].type.triangle.a, scene->objects.ptr[i].type.triangle.b), scene->objects.ptr[i].type.triangle.c),
+            .max = v_max(v_max(scene->objects.ptr[i].type.triangle.a, scene->objects.ptr[i].type.triangle.b), scene->objects.ptr[i].type.triangle.c)
+        };
+    }
 }
