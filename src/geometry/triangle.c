@@ -26,3 +26,11 @@ double triangle_ray_intersection(Object *object, Ray *ray) {
     
     return t;
 }
+
+HitResult get_triangle_result(Ray *ray, Object *object, double t) {
+    Vec p;
+
+    p = v_add(ray->o, scale(ray->v, t));
+
+    return (HitResult){.point = p, .normal = object->type.triangle.ng, .t = t, .material = object->m};
+}

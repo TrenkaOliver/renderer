@@ -36,11 +36,3 @@ HitResult get_sphere_result(Ray *ray, Object *object, double t) {
 
     return (HitResult){.point = p, .normal = n, .t = t, .material = object->m};
 }
-
-HitResult get_triangle_result(Ray *ray, Object *object, double t) {
-    Vec p;
-
-    p = v_add(ray->o, scale(ray->v, t));
-
-    return (HitResult){.point = p, .normal = object->type.triangle.n, .t = t, .material = object->m};
-}

@@ -114,9 +114,13 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
     ptr->type.triangle.b = b;
     ptr->type.triangle.c = c;
 
+    ptr->type.triangle.na = vec(0.0, 0.0, 0.0);
+    ptr->type.triangle.nb = vec(0.0, 0.0, 0.0);
+    ptr->type.triangle.nc = vec(0.0, 0.0, 0.0);
+
     n = normalize(cross(v_sub(b, a), v_sub(c, a)));
     if (dot(n, scene->dir_light.direction) > 0.0) n = neg(n);
-    ptr->type.triangle.n = n;
+    ptr->type.triangle.ng = n;
 
     ptr->aabb.min = vec(
         fmin(a.x, fmin(b.x, c.x)),
@@ -137,6 +141,18 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
 
     return ptr;
 }
+
+Object *add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *m) {
+    Object *ptr;
+
+    ptr = add_triangle(scene, a, b, c, m);
+    ptr->type.triangle.na = na;
+    ptr->type.triangle.nb = nb;
+    ptr->type.triangle.nc = nc;
+
+    return ptr;
+}
+
 
 
 Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m) {
@@ -182,31 +198,45 @@ Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m)
     return ptr;
 }
 
-void add_vertex(VertexArray *v_arr, Vec vertex) {
+void add_element(VecDynArray *v_arr, Vec vertex) {
     if (v_arr->count == v_arr->capacity) {
         v_arr->capacity *= 2;
-        v_arr->vertices = realloc(v_arr->vertices, v_arr->capacity * sizeof(Vec));
+        v_arr->ptr = realloc(v_arr->ptr, v_arr->capacity * sizeof(Vec));
     }
 
-    v_arr->vertices[v_arr->count++] = vertex;
+    v_arr->ptr[v_arr->count++] = vertex;
 }
 
 
 Mesh *inport_mesh(Scene *scene, char *file_name) {
     FILE *f;
-    VertexArray v_arr;
+    VecDynArray v_arr, vt_arr, vn_arr;
     Mesh *mesh;
+    Object *t;
     AABB aabb;
-    Vec v;
-    size_t idx[64], count;
+    Vec _v;
+    Face idx[64];
+    size_t count;
     char line[128], *p;
-    long i;
+    long v, vn, vt, i;
     
     f = fopen(file_name, "r");
-    v_arr = (VertexArray){
-        .vertices = calloc(64, sizeof(Vec)),
+    v_arr = (VecDynArray){
+        .ptr = calloc(64, sizeof(Vec)),
         .capacity = 64,
         .count = 0,
+    };
+
+    vt_arr = (VecDynArray){
+        .ptr = calloc(64, sizeof(Vec)),
+        .capacity = 64,
+        .count = 0,
+    };
+
+    vn_arr = (VecDynArray){
+        .ptr = calloc(64, sizeof(Vec)),
+        .capacity = 64,
+        .count = 0
     };
     
     mesh = add_mesh(scene);
@@ -217,8 +247,10 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
     aabb = (AABB){.min = vec(INFINITY, INFINITY, INFINITY), .max = vec(-INFINITY, -INFINITY, -INFINITY)};
 
     while (fgets(line, 128, f)){
-        if (sscanf(line, "v %lf %lf %lf", &v.x, &v.y, &v.z) == 3) {
-            add_vertex(&v_arr, v);
+        if (sscanf(line, "v %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
+            add_element(&v_arr, _v);
+        } else if (sscanf(line, "vn %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
+            add_element(&vn_arr, _v);
         } else if (line[0] == 'f' && line[1] == ' ') {
             p = line + 2;
             count = 0;
@@ -227,8 +259,27 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
                 while (isspace(*p)) p++;
                 if (!*p) break;
 
-                i = strtol(p, &p, 10);
-                idx[count++] = (i < 0) ? (size_t)(v_arr.count + i) : (size_t)(i - 1);
+                if (sscanf(p, "%ld/%ld/%ld", &v, &vt, &vn) == 3) {
+                    idx[count++] = (Face){
+                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
+                        .vn = (vn < 0) ? (size_t)(vn_arr.count + vn) : (size_t)(vn - 1)
+                    };
+                } else if (sscanf(p, "%ld//%ld", &v, &vn) == 2) {
+                    idx[count++] = (Face){
+                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
+                        .vn = (vn < 0) ? (size_t)(vn_arr.count + vn) : (size_t)(vn - 1)
+                    };
+                } else if (sscanf(p, "%ld/%ld", &v, &vt) == 2) {
+                    idx[count++] = (Face){
+                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
+                        .vn = (size_t)-1
+                    };
+                } else if (sscanf(p, "%ld", &v) == 1) {
+                    idx[count++] = (Face){
+                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
+                        .vn = (size_t)-1
+                    };
+                }
 
                 while(*p && !isspace(*p)) p++;
                 
@@ -238,7 +289,17 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
             if (count < 3) continue;
 
             for (i = 1; i < count - 1; i++) {
-                Object *t = add_triangle(scene, v_arr.vertices[idx[0]], v_arr.vertices[idx[i]], v_arr.vertices[idx[i + 1]], &no_texture);
+                //Object *t = add_triangle(scene, v_arr.ptr[idx[0].v], v_arr.ptr[idx[i].v], v_arr.ptr[idx[i + 1].v], &no_texture);
+                t = add_triangle_ns(
+                    scene,
+                    v_arr.ptr[idx[0].v],
+                    v_arr.ptr[idx[i].v],
+                    v_arr.ptr[idx[i + 1].v],
+                    idx[0].vn == (size_t)-1 ? v_arr.ptr[idx[0].vn] : vec(0.0, 0.0, 0.0),
+                    idx[i].vn == (size_t)-1 ? v_arr.ptr[idx[i].vn] : vec(0.0, 0.0, 0.0),
+                    idx[i + 1].vn == (size_t)-1 ? v_arr.ptr[idx[i + 1].vn] : vec(0.0, 0.0, 0.0),
+                    &no_texture
+                );
                 aabb = aabb_merge(aabb, t->aabb);
                 mesh->triangle_count++;
             }
@@ -248,7 +309,7 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
     mesh->position = aabb.min;
     mesh->size = v_sub(aabb.max, aabb.min);
     
-    free(v_arr.vertices);
+    free(v_arr.ptr);
     return mesh;
 }
 

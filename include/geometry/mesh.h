@@ -3,11 +3,17 @@
 
 #include "geometry/object.h"
 
-typedef struct VertexArray {
-    Vec *vertices;
+typedef struct VecDynArray {
+    Vec *ptr;
     size_t capacity;
     size_t count;
-} VertexArray;
+} VecDynArray;
+
+typedef struct Face {
+    size_t v;
+    size_t vt;
+    size_t vn;
+} Face;
 
 typedef struct Mesh {
     Vec position;
@@ -17,6 +23,6 @@ typedef struct Mesh {
     size_t triangle_count;
 } Mesh;
 
-void add_vertex(VertexArray *v_arr, Vec vertex);
+void add_element(VecDynArray *v_arr, Vec vertex);
 
 #endif

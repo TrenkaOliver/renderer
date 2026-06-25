@@ -43,19 +43,18 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 2560;
-    int height = 1440;
+    int width = 1280;
+    int height = 720;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
     RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 3};
-    Camera cam = create_look_at_camera(vec(0.0, -25.0, 10.0), vec(0.0, 0.0, 10.0), 1.0472);
+    Camera cam = create_look_at_camera(vec(0.0, -2.0, 30.0), vec(0.0, 10.0, 10.0), 1.0472);
 
     Mesh *mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
     set_mesh_position(&scene, mesh, vec(0.0, 0.0, 0.0));
-    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
 
     printf("size: %f, %f, %f\n", mesh->size.x, mesh->size.y, mesh->size.z);
 

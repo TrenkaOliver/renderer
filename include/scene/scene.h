@@ -45,6 +45,7 @@ Mesh *inport_mesh(Scene *scene, char *file_name);
 
 Object *add_sphere(Scene *scene, Vec center, double radious, Material *material);
 Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
+Object *add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
 Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
 
 

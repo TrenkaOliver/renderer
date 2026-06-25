@@ -7,7 +7,10 @@ typedef struct Triangle {
     Vec a;
     Vec b;
     Vec c;
-    Vec n;
+    Vec ng;
+    Vec na;
+    Vec nb;
+    Vec nc;
 } Triangle;
 
 #endif
