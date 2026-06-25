@@ -1,7 +1,7 @@
 #include <math.h>
 #include "geometry/object.h"
 
-double sphere_ray_intersection(Object *object, Ray *ray) {
+double sphere_ray_intersection(Object *object, Ray *ray, Info *info) {
     double a, b, c, d, t1, t2, t;
     Vec m;
 
@@ -28,11 +28,11 @@ double sphere_ray_intersection(Object *object, Ray *ray) {
     return t;
 }
 
-HitResult get_sphere_result(Ray *ray, Object *object, double t) {
+HitResult get_sphere_result(Ray *ray, Object *object, Info *info, double t) {
     Vec p, n;
 
     p = v_add(ray->o, scale(ray->v, t));
     n = normalize(v_sub(p, object->type.sphere.o));
 
-    return (HitResult){.point = p, .normal = n, .t = t, .material = object->m};
+    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->m};
 }

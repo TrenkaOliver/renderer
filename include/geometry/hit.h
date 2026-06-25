@@ -6,9 +6,17 @@
 
 typedef struct HitResult {
     Vec point;
-    Vec normal;
+    Vec ng;
+    Vec ns;
     double t;
     Material *material;
 } HitResult;
+
+typedef struct Info {
+    double u;
+    double v;
+    double w;
+} Info;
+
 
 #endif

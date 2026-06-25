@@ -3,7 +3,7 @@
 
 #define EPSILON 1e-8
 
-double box_ray_intersection(Object *object, Ray *ray) {
+double box_ray_intersection(Object *object, Ray *ray, Info *info) {
     int i;
     double t_min, t_max, t1, t2, e, f, h, temp;
     Vec p;
@@ -45,7 +45,7 @@ double box_ray_intersection(Object *object, Ray *ray) {
     return t_min >= 0.0 ? t_min : t_max;
 }
 
-HitResult get_box_result(Ray *ray, Object *object, double t) {
+HitResult get_box_result(Ray *ray, Object *object, Info *info, double t) {
     Vec p, dist, n;
     double x, y, z, ax, ay, az;
 
@@ -67,5 +67,5 @@ HitResult get_box_result(Ray *ray, Object *object, double t) {
     else
         n = (z > 0.0) ? object->type.box.axes[2] : neg(object->type.box.axes[2]);
 
-    return (HitResult){.point = p, .normal = n, .t = t, .material = object->m};
+    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->m};
 }

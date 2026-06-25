@@ -4,7 +4,7 @@
 #include "math/vec.h"
 
 typedef struct DirectionalLight {
-    Vec direction;
+    Vec dir;
     Vec neg_dir;
     Vec scaled_color;
     Vec color;

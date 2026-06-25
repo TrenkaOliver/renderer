@@ -13,7 +13,7 @@ Vec FORWARD = {.x = 0.0, .y = 1.0, .z = 0.0};
 Vec UP = {.x = 0.0, .y = 0.0, .z = 1.0};
 
 Material no_texture = {
-    .diffuse = {.x = 0.91, .y = 0.76, .z = 0.65},
+    .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
     .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
     .shininess = 1,
 };
@@ -34,12 +34,12 @@ Scene create_scene() {
     };
 
     scene.dir_light = (DirectionalLight){
-        .direction = normalize(vec(0.6, 0.6, -1.0)),
+        .dir = normalize(vec(0.0, 0.0, 1.0)),
         .color = vec(1.0, 0.95, 0.9),
         .intensity = 1,
     };
 
-    scene.dir_light.neg_dir = neg(scene.dir_light.direction);
+    scene.dir_light.neg_dir = neg(scene.dir_light.dir);
     scene.dir_light.scaled_color = scale(scene.dir_light.color, scene.dir_light.intensity);
 
     scene.global_ambient = vec(0.33, 0.33, 0.33);
@@ -55,7 +55,7 @@ Plane *add_plane(Scene *scene, Vec o, Vec n, Material *m) {
         scene->planes.ptr = realloc(scene->planes.ptr, scene->planes.capacity * sizeof(Plane));
     }
 
-    if (dot(n, scene->dir_light.direction) > 0.0) n = neg(n);
+    //if (dot(n, scene->dir_light.dir) > 0.0) n = neg(n);
 
     *((ptr = scene->planes.ptr + scene->planes.count++)) = (Plane){
         .o = o,
@@ -110,6 +110,8 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
     
     ptr = add_object(scene);
 
+    ptr->type.triangle.const_normal = 1;
+
     ptr->type.triangle.a = a;
     ptr->type.triangle.b = b;
     ptr->type.triangle.c = c;
@@ -119,8 +121,8 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
     ptr->type.triangle.nc = vec(0.0, 0.0, 0.0);
 
     n = normalize(cross(v_sub(b, a), v_sub(c, a)));
-    if (dot(n, scene->dir_light.direction) > 0.0) n = neg(n);
-    ptr->type.triangle.ng = n;
+    // if (dot(n, scene->dir_light.dir) > 0.0) n = neg(n);
+    // ptr->type.triangle.ng = n;
 
     ptr->aabb.min = vec(
         fmin(a.x, fmin(b.x, c.x)),
@@ -146,6 +148,9 @@ Object *add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec n
     Object *ptr;
 
     ptr = add_triangle(scene, a, b, c, m);
+
+    ptr->type.triangle.const_normal = 0;
+
     ptr->type.triangle.na = na;
     ptr->type.triangle.nb = nb;
     ptr->type.triangle.nc = nc;
@@ -250,7 +255,7 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
         if (sscanf(line, "v %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
             add_element(&v_arr, _v);
         } else if (sscanf(line, "vn %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
-            add_element(&vn_arr, _v);
+            add_element(&vn_arr, normalize(_v));
         } else if (line[0] == 'f' && line[1] == ' ') {
             p = line + 2;
             count = 0;
@@ -289,15 +294,15 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
             if (count < 3) continue;
 
             for (i = 1; i < count - 1; i++) {
-                //Object *t = add_triangle(scene, v_arr.ptr[idx[0].v], v_arr.ptr[idx[i].v], v_arr.ptr[idx[i + 1].v], &no_texture);
+                //printf("%f, %f, %f\n", vn_arr.ptr[idx[i].vn].x, vn_arr.ptr[idx[i].vn].y, vn_arr.ptr[idx[i].vn].z);
                 t = add_triangle_ns(
                     scene,
                     v_arr.ptr[idx[0].v],
                     v_arr.ptr[idx[i].v],
                     v_arr.ptr[idx[i + 1].v],
-                    idx[0].vn == (size_t)-1 ? v_arr.ptr[idx[0].vn] : vec(0.0, 0.0, 0.0),
-                    idx[i].vn == (size_t)-1 ? v_arr.ptr[idx[i].vn] : vec(0.0, 0.0, 0.0),
-                    idx[i + 1].vn == (size_t)-1 ? v_arr.ptr[idx[i + 1].vn] : vec(0.0, 0.0, 0.0),
+                    idx[0].vn != (size_t)-1 ? vn_arr.ptr[idx[0].vn] : vec(0.0, 0.0, 0.0),
+                    idx[i].vn != (size_t)-1 ? vn_arr.ptr[idx[i].vn] : vec(0.0, 0.0, 0.0),
+                    idx[i + 1].vn != (size_t)-1 ? vn_arr.ptr[idx[i + 1].vn] : vec(0.0, 0.0, 0.0),
                     &no_texture
                 );
                 aabb = aabb_merge(aabb, t->aabb);
@@ -310,6 +315,8 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
     mesh->size = v_sub(aabb.max, aabb.min);
     
     free(v_arr.ptr);
+    free(vt_arr.ptr);
+    free(vn_arr.ptr);
     return mesh;
 }
 
@@ -317,9 +324,9 @@ void set_mesh_position(Scene *scene, Mesh *mesh, Vec position) {
     size_t i, end;
     Vec delta;
 
-    mesh->position = position;
-
     delta = v_sub(position, mesh->position);
+    
+    mesh->position = position;
 
     end = mesh->first_triangle + mesh->triangle_count;
 

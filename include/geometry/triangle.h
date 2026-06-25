@@ -4,6 +4,7 @@
 #include "math/vec.h"
 
 typedef struct Triangle {
+    int const_normal;
     Vec a;
     Vec b;
     Vec c;

@@ -17,17 +17,17 @@ typedef struct Object {
     } type;
     AABB aabb;
     Material *m;
-    double (*get_ray_intersection)(struct Object *, Ray *);
-    HitResult (*get_hit_result)(Ray *, struct Object *, double);
+    double (*get_ray_intersection)(struct Object *, Ray *, Info *);
+    HitResult (*get_hit_result)(Ray *, struct Object *, Info *, double);
 } Object;
 
-double sphere_ray_intersection(Object *object, Ray *ray);
-HitResult get_sphere_result(Ray *ray, Object *object, double t);
+double sphere_ray_intersection(Object *object, Ray *ray, Info *info);
+HitResult get_sphere_result(Ray *ray, Object *object, Info *info, double t);
 
-double triangle_ray_intersection(Object *object, Ray *ray);
-HitResult get_triangle_result(Ray *ray, Object *object, double t);
+double triangle_ray_intersection(Object *object, Ray *ray, Info *info);
+HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t);
 
-double box_ray_intersection(Object *object, Ray *ray);
-HitResult get_box_result(Ray *ray, Object *object, double t);
+double box_ray_intersection(Object *object, Ray *ray, Info *info);
+HitResult get_box_result(Ray *ray, Object *object, Info *info, double t);
 
 #endif

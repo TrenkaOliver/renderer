@@ -22,18 +22,18 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
         }
     }
 
-    if (!plane) return (HitResult){.point = vec(0.0, 0.0, 0.0), .normal = vec(0.0, 0.0, 0.0), .t = -1.0};
+    if (!plane) return (HitResult){.point = vec(0.0, 0.0, 0.0), .ng = vec(0.0, 0.0, 0.0), .t = -1.0};
 
     Vec p = v_add(ray->o, scale(ray->v, t));
 
-    return (HitResult){.point = p, .normal = plane->n, .t = t, .material = plane->m};
+    return (HitResult){.point = p, .ng = plane->n, .ns = plane->n, .t = t, .material = plane->m};
 }
 
 int is_shaded_by_plane(Ray *ray, Planes *planes) {
     int i;
 
     for (i = 0; i < planes->count; i++)
-        if (plane_ray_intersection(planes->ptr + i, ray) >= 0.0) return 1;
+        if (plane_ray_intersection(planes->ptr + i, ray) > EPSILON) return 1;
 
     return 0;
 }
@@ -42,6 +42,7 @@ HitResult get_first_object(Ray *ray, BVH *bvh) {
     int sp, i;
     double t_left, t_right, t_near, t_far, t, t_min;
     Object *object, *closest;
+    Info info, closest_info;
     BVHNode *stack[128], *n, *near, *far;
 
     t_min = INFINITY;
@@ -57,9 +58,10 @@ HitResult get_first_object(Ray *ray, BVH *bvh) {
         if (n->first_primitive) {
             for (i = 0; i < n->primitive_count; i++) {
                 object = n->first_primitive[i];
-                t = object->get_ray_intersection(object, ray);
+                t = object->get_ray_intersection(object, ray, &info);
                 if (t >= 0.0 && t < t_min) {
                     closest = object;
+                    closest_info = info;
                     t_min = t;
                 }
             }
@@ -92,12 +94,13 @@ HitResult get_first_object(Ray *ray, BVH *bvh) {
     if (!closest)
         return (HitResult){.t = -1.0};
     else
-        return closest->get_hit_result(ray, closest, t_min);
+        return closest->get_hit_result(ray, closest, &closest_info, t_min);
 }
 
 int is_shaded_by_object(Ray *ray, BVH *bvh) {
     int sp, i;
     Object *object;
+    Info info;
     BVHNode *stack[128], *n;
 
     sp = 0;
@@ -111,7 +114,7 @@ int is_shaded_by_object(Ray *ray, BVH *bvh) {
         if (n->first_primitive) {
             for (i = 0; i < n->primitive_count; i++) {
                 object = n->first_primitive[i];
-                if (object->get_ray_intersection(object, ray) >= 0.0) return 1;
+                if (object->get_ray_intersection(object, ray, &info) > EPSILON) return 1;
             }
             continue;
         }
@@ -154,12 +157,12 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
     if (hit.t < 0.0) {
         return vec(0.0, 0.0, 0.0);
     } else {
-        shadow_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), scene->dir_light.neg_dir);
+        shadow_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), scene->dir_light.dir);
         
-        intensity = dot(hit.normal, scene->dir_light.neg_dir);
-        light_reflection = normalize(v_sub(scene->dir_light.direction, scale(hit.normal, 2 * dot(hit.normal, scene->dir_light.direction))));
+        intensity = dot(hit.ns, scene->dir_light.dir);
+        light_reflection = normalize(v_sub(scene->dir_light.dir, scale(hit.ns, 2.0 * dot(hit.ns, scene->dir_light.dir))));
 
-        if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0) {
+        if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0.0) {
             c_diffuse = vec(0.0, 0.0, 0.0);
             c_specular = vec(0.0, 0.0, 0.0);
         }
@@ -192,8 +195,8 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
 
         if (hit.material->reflectivity == 0.0 || depth == 0) return c_local;
 
-        ray_reflection = normalize(v_sub(ray->v, scale(hit.normal, 2 * dot(hit.normal, ray->v))));
-        reflection_ray = create_ray(v_add(hit.point, scale(hit.normal, EPSILON)), ray_reflection);
+        ray_reflection = normalize(v_sub(ray->v, scale(hit.ng, 2 * dot(hit.ng, ray->v))));
+        reflection_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), ray_reflection);
         c_reflected = trace_ray(&reflection_ray, scene, cam, bvh, depth - 1);
 
         c = v_add(scale(c_local, 1.0 - hit.material->reflectivity), scale(c_reflected, hit.material->reflectivity));

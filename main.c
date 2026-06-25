@@ -51,12 +51,20 @@ int main() {
 
     Scene scene = create_scene();
     RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 3};
-    Camera cam = create_look_at_camera(vec(0.0, -2.0, 30.0), vec(0.0, 10.0, 10.0), 1.0472);
+    Camera cam = create_look_at_camera(vec(0.0, -20.0, 40.0), vec(0.0, 0.0, 0.0), 1.0472);
 
-    Mesh *mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
-    set_mesh_position(&scene, mesh, vec(0.0, 0.0, 0.0));
+    scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
-    printf("size: %f, %f, %f\n", mesh->size.x, mesh->size.y, mesh->size.z);
+    Mesh *body_mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
+    //Mesh *cube_mesh = inport_mesh(&scene, "./models/cube.obj");
+    //set_mesh_position(&scene, cube_mesh, vec(0.0, 0.0, 0.0));
+
+    //add_box(&scene, vec(40.0, 40.0, 0.0), vec(0.0, 0.0, 0.0), vec(20.0, 20.0, 20.0), &orange);
+    //set_mesh_position(&scene, body_mesh, vec(0.0, 0.0, 0.0));
+
+    //add_box(&scene, vec(15.0, 10.0, 0.0), vec(0.0, 0.0, 0.0), v_add(scale(scene.dir_light.dir, 10.0), vec(10.0, 1.0, 1.0)), &orange);
+
+    //printf("size: %f, %f, %f\n", body_mesh->size.x, body_mesh->size.y, body_mesh->size.z);
 
     // for (int x = -300; x <= 300; x += 60) {
     //     for (int y = 0; y <= 1200; y += 60) {
