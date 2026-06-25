@@ -48,9 +48,14 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
 Object *add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
 Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
 
+void move_mesh(Scene *scene, Mesh *mesh, Vec delta);   
+void scale_mesh(Scene *scene, Mesh *mesh, Vec scale);
+void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation);
 
 void set_mesh_position(Scene *scene, Mesh *mesh, Vec position);   
 void set_mesh_size(Scene *scene, Mesh *mesh, Vec size);
 void set_mesh_rotation(Scene *scene, Mesh *mesh, Vec rotation);
+
+void apply_mesh_transform(Scene *scene, Mesh *mesh);
 
 #endif

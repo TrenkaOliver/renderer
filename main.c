@@ -51,11 +51,24 @@ int main() {
 
     Scene scene = create_scene();
     RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 3};
-    Camera cam = create_look_at_camera(vec(0.0, -20.0, 40.0), vec(0.0, 0.0, 0.0), 1.0472);
+    Camera cam = create_look_at_camera(vec(0.0, -75.0, 0.0), vec(0.0, 0.0, 0.0), 1.0472);
 
     scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
     Mesh *body_mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
+    set_mesh_rotation(&scene, body_mesh, vec(1.5, 0.0, 0.0));
+    apply_mesh_transform(&scene, body_mesh);
+
+    scale_mesh(&scene, body_mesh, vec(2.0, 2.0, 2.0));
+    set_mesh_position(&scene, body_mesh, vec(
+        body_mesh->size.x * -0.5,
+        body_mesh->size.y * -0.5,
+        body_mesh->size.z * -0.5
+    ));
+
+    add_sphere(&scene, body_mesh->aabb.min, 1, &green);
+    add_sphere(&scene, body_mesh->aabb.max, 1, &orange);
+
     //Mesh *cube_mesh = inport_mesh(&scene, "./models/cube.obj");
     //set_mesh_position(&scene, cube_mesh, vec(0.0, 0.0, 0.0));
 

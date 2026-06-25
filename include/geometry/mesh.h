@@ -19,6 +19,7 @@ typedef struct Mesh {
     Vec position;
     Vec rotation;
     Vec size;
+    AABB aabb;
     size_t first_triangle;
     size_t triangle_count;
 } Mesh;
