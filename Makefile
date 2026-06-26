@@ -7,6 +7,8 @@ SRC = 	main.c \
 		src/camera/camera.c \
 		src/geometry/aabb.c \
 		src/geometry/box.c \
+		src/geometry/mesh.c \
+		src/geometry/object.c \
 		src/geometry/plane.c \
 		src/geometry/sphere.c \
 		src/geometry/triangle.c \

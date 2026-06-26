@@ -78,9 +78,7 @@ double SA(AABB aabb) {
 }
 
 void build_boxes(Object **arr, size_t count, AABB *left_box, AABB *right_box) {
-    size_t i, offset;
-
-    offset = arr - ptr_array_start;
+    size_t i;
 
     left_box[0] = arr[0]->aabb;
     for (i = 1; i < count - 1; i++) {

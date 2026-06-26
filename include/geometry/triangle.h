@@ -5,6 +5,7 @@
 
 typedef struct Triangle {
     int const_normal;
+    int has_texture;
     Vec a;
     Vec b;
     Vec c;
@@ -12,6 +13,9 @@ typedef struct Triangle {
     Vec na;
     Vec nb;
     Vec nc;
+    Vec ta;
+    Vec tb;
+    Vec tc;
 } Triangle;
 
 #endif
