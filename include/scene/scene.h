@@ -56,6 +56,6 @@ void set_mesh_position(Scene *scene, Mesh *mesh, Vec position);
 void set_mesh_size(Scene *scene, Mesh *mesh, Vec size);
 void set_mesh_rotation(Scene *scene, Mesh *mesh, Vec rotation);
 
-void apply_mesh_transform(Scene *scene, Mesh *mesh);
+void apply_mesh_transform(Mesh *mesh);
 
 #endif

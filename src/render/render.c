@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+
 #include "accel/bvh.h"
 #include "geometry/object.h"
 #include "render/render.h"
@@ -15,6 +17,8 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     Vec c;
     Ray ray;
     BVH bvh;
+
+    clock_t bvh_start = clock();
 
     fprintf(f, "P6\n");
     fprintf(f, "%d %d\n", settings->width, settings->height);
@@ -32,11 +36,13 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
-    printf("primitives are ready\n");
-
     bvh = create_bvh(scene->objects.ptr, scene->objects.count);
 
-    printf("bvh is ready\n");
+    clock_t bvh_end = clock();
+
+    printf("Bvh creation: %.3f s\n", (double)(bvh_end - bvh_start) / CLOCKS_PER_SEC);
+
+    clock_t render_start = clock();
 
     for (i = 0; i < settings->height; i++) {
         for (j = 0; j < settings->width; j++) {
@@ -72,6 +78,10 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     fwrite(pa, sizeof(char), count, f);
     
     free(pa);
+
+    clock_t render_end = clock();
+
+    printf("Rendering: %.3f s\n", (double)(render_end - render_start) / CLOCKS_PER_SEC);
 
     return 0;
 }

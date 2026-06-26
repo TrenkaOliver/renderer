@@ -36,9 +36,9 @@ Scene create_scene() {
     };
 
     scene.objects = (Objects){
-        .ptr = calloc(16, sizeof(Object)),
+        .ptr = calloc(128, sizeof(Object)),
         .count = 0,
-        .capacity = 16,
+        .capacity = 128,
     };
 
     scene.dir_light = (DirectionalLight){
@@ -63,8 +63,6 @@ Plane *add_plane(Scene *scene, Vec o, Vec n, Material *m) {
         scene->planes.ptr = realloc(scene->planes.ptr, scene->planes.capacity * sizeof(Plane));
     }
 
-    //if (dot(n, scene->dir_light.dir) > 0.0) n = neg(n);
-
     *((ptr = scene->planes.ptr + scene->planes.count++)) = (Plane){
         .o = o,
         .n = n,
@@ -76,7 +74,7 @@ Plane *add_plane(Scene *scene, Vec o, Vec n, Material *m) {
 
 Object *add_object(Scene *scene) {
     if (scene->objects.count == scene->objects.capacity) {
-        scene->objects.capacity += 16;
+        scene->objects.capacity *= 2;
         scene->objects.ptr = realloc(scene->objects.ptr, scene->objects.capacity * sizeof(Object));
     }
 
@@ -129,8 +127,8 @@ Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
     ptr->type.triangle.nc = vec(0.0, 0.0, 0.0);
 
     n = normalize(cross(v_sub(b, a), v_sub(c, a)));
-    // if (dot(n, scene->dir_light.dir) > 0.0) n = neg(n);
-    // ptr->type.triangle.ng = n;
+
+    ptr->type.triangle.ng = n;
 
     ptr->aabb.min = vec(
         fmin(a.x, fmin(b.x, c.x)),
@@ -229,9 +227,9 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
     AABB aabb;
     Vec _v;
     Face idx[64];
-    size_t count;
+    size_t count, i;
     char line[128], *p;
-    long v, vn, vt, i;
+    long long v, vn, vt;
     
     f = fopen(file_name, "r");
     v_arr = (VecDynArray){
@@ -269,32 +267,36 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
             count = 0;
 
             while(*p) {
-                while (isspace(*p)) p++;
+                while (isspace((unsigned char)*p)) p++;
                 if (!*p) break;
 
-                if (sscanf(p, "%ld/%ld/%ld", &v, &vt, &vn) == 3) {
-                    idx[count++] = (Face){
-                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
-                        .vn = (vn < 0) ? (size_t)(vn_arr.count + vn) : (size_t)(vn - 1)
-                    };
-                } else if (sscanf(p, "%ld//%ld", &v, &vn) == 2) {
-                    idx[count++] = (Face){
-                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
-                        .vn = (vn < 0) ? (size_t)(vn_arr.count + vn) : (size_t)(vn - 1)
-                    };
-                } else if (sscanf(p, "%ld/%ld", &v, &vt) == 2) {
-                    idx[count++] = (Face){
-                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
-                        .vn = (size_t)-1
-                    };
-                } else if (sscanf(p, "%ld", &v) == 1) {
-                    idx[count++] = (Face){
-                        .v = (v < 0) ? (size_t)(v_arr.count + v) : (size_t)(v - 1),
-                        .vn = (size_t)-1
-                    };
+                v = strtoll(p, &p, 10);
+                v = v < 0 ? (size_t)(v_arr.count + v) : (size_t)(v - 1);
+                if (*p == '/') {
+                    p++;
+
+                    if (*p != '/') {
+                        vt = strtoll(p, &p, 10);
+                        vt = vt < 0 ? (size_t)(vt_arr.count + vt) : (size_t)(vt - 1);
+                    } else {
+                        vt = (size_t)-1;
+                    }
+
+                    if (*p == '/') {
+                        p++;
+                        vn = strtoll(p, &p, 10);
+                        vn = vn < 0 ? (size_t)(vn_arr.count + vn) : (size_t)(vn - 1);
+                    } else {
+                        vn = (size_t)-1;
+                    }
+                } else {
+                    vt = (size_t)-1;
+                    vn = (size_t)-1;
                 }
 
-                while(*p && !isspace(*p)) p++;
+                idx[count++] = (Face){.v = v, .vt = vt, .vn = vn};
+
+                while(*p && !isspace((unsigned char)*p)) p++;
                 
                 if (count >= 64) break;
             }
@@ -302,7 +304,6 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
             if (count < 3) continue;
 
             for (i = 1; i < count - 1; i++) {
-                //printf("%f, %f, %f\n", vn_arr.ptr[idx[i].vn].x, vn_arr.ptr[idx[i].vn].y, vn_arr.ptr[idx[i].vn].z);
                 t = add_triangle_ns(
                     scene,
                     v_arr.ptr[idx[0].v],
@@ -326,6 +327,9 @@ Mesh *inport_mesh(Scene *scene, char *file_name) {
     free(v_arr.ptr);
     free(vt_arr.ptr);
     free(vn_arr.ptr);
+
+    fclose(f);
+
     return mesh;
 }
 
@@ -436,7 +440,7 @@ void set_mesh_rotation(Scene *scene, Mesh *mesh, Vec rotation) {
     rotate_mesh(scene, mesh, delta);
 }
 
-void apply_mesh_transform(Scene *scene, Mesh *mesh) {
+void apply_mesh_transform(Mesh *mesh) {
     Vec min, max;
 
     min = mesh->aabb.min;

@@ -17,7 +17,7 @@ BVH create_bvh(Object *first, size_t count) {
 }
 
 BVHNode *create_node(BVHNode *left, BVHNode *right, Object **first, size_t count) {
-    int i;
+    size_t i;
     AABB aabb;
     BVHNode *node;
 

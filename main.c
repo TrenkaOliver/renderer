@@ -43,8 +43,8 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 1280;
-    int height = 720;
+    int width = 1920;
+    int height = 1080;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
@@ -57,7 +57,7 @@ int main() {
 
     Mesh *body_mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
     set_mesh_rotation(&scene, body_mesh, vec(1.5, 0.0, 0.0));
-    apply_mesh_transform(&scene, body_mesh);
+    apply_mesh_transform(body_mesh);
 
     scale_mesh(&scene, body_mesh, vec(2.0, 2.0, 2.0));
     set_mesh_position(&scene, body_mesh, vec(
@@ -69,17 +69,7 @@ int main() {
     add_sphere(&scene, body_mesh->aabb.min, 1, &green);
     add_sphere(&scene, body_mesh->aabb.max, 1, &orange);
 
-    //Mesh *cube_mesh = inport_mesh(&scene, "./models/cube.obj");
-    //set_mesh_position(&scene, cube_mesh, vec(0.0, 0.0, 0.0));
-
-    //add_box(&scene, vec(40.0, 40.0, 0.0), vec(0.0, 0.0, 0.0), vec(20.0, 20.0, 20.0), &orange);
-    //set_mesh_position(&scene, body_mesh, vec(0.0, 0.0, 0.0));
-
-    //add_box(&scene, vec(15.0, 10.0, 0.0), vec(0.0, 0.0, 0.0), v_add(scale(scene.dir_light.dir, 10.0), vec(10.0, 1.0, 1.0)), &orange);
-
-    //printf("size: %f, %f, %f\n", body_mesh->size.x, body_mesh->size.y, body_mesh->size.z);
-
-    // for (int x = -300; x <= 300; x += 60) {
+    /* for (int x = -300; x <= 300; x += 60) {
     //     for (int y = 0; y <= 1200; y += 60) {
     //         for (int z = 20; z <= 260; z += 60) {
 
@@ -113,12 +103,11 @@ int main() {
     //     vec(0.0, 0.0, 1.0),
     //     &white
     // );
+    */
 
+    clock_t end = clock();
+    printf("Scene creation: %.3f s\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     render(f, &scene, &cam, &settings);
     fclose(f);
-
-    clock_t end = clock();
-
-    printf("Time: %.3f s\n", (double)(end - start) / CLOCKS_PER_SEC);
 }

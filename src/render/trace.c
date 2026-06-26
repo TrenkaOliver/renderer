@@ -7,8 +7,8 @@
 #include "scene/scene.h"
 
 HitResult get_first_plane(Ray *ray, Planes *planes) {
-    int i;
     double t, tc;
+    size_t i;
     Plane *plane;
 
     t = INFINITY;
@@ -30,7 +30,7 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
 }
 
 int is_shaded_by_plane(Ray *ray, Planes *planes) {
-    int i;
+    size_t i;
 
     for (i = 0; i < planes->count; i++)
         if (plane_ray_intersection(planes->ptr + i, ray) > EPSILON) return 1;
@@ -39,7 +39,8 @@ int is_shaded_by_plane(Ray *ray, Planes *planes) {
 }
 
 HitResult get_first_object(Ray *ray, BVH *bvh) {
-    int sp, i;
+    int sp;
+    size_t i;
     double t_left, t_right, t_near, t_far, t, t_min;
     Object *object, *closest;
     Info info, closest_info;
@@ -98,7 +99,8 @@ HitResult get_first_object(Ray *ray, BVH *bvh) {
 }
 
 int is_shaded_by_object(Ray *ray, BVH *bvh) {
-    int sp, i;
+    int sp;
+    size_t i;
     Object *object;
     Info info;
     BVHNode *stack[128], *n;
