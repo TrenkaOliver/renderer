@@ -7,12 +7,25 @@
 #define LEAF_SIZE 4
 #define C_TRAVEL 1
 
+static AABB *left_box;
+static AABB *right_box;
+static Object **ptr_array_start;
+
 BVH create_bvh(Object *first, size_t count) {
     size_t i;
     BVH bvh;
-    bvh.ptr_array = calloc(count, sizeof(Object *));
+
+    bvh.ptr_array = ptr_array_start = calloc(count, sizeof(Object *));
+    left_box = calloc(count, sizeof(AABB));
+    right_box = calloc(count, sizeof(AABB));
+
     for (i = 0; i < count; i++) *(bvh.ptr_array + i) = first + i;
+
     bvh.root = build_tree(bvh.ptr_array, count);
+    
+    free(left_box);
+    free(right_box);
+
     return bvh;
 }
 
@@ -65,7 +78,9 @@ double SA(AABB aabb) {
 }
 
 void build_boxes(Object **arr, size_t count, AABB *left_box, AABB *right_box) {
-    size_t i;
+    size_t i, offset;
+
+    offset = arr - ptr_array_start;
 
     left_box[0] = arr[0]->aabb;
     for (i = 1; i < count - 1; i++) {
@@ -81,11 +96,7 @@ void build_boxes(Object **arr, size_t count, AABB *left_box, AABB *right_box) {
 BVHNode *build_tree(Object **arr, size_t count) {
     int (*cmp)(const void *, const void *);
     size_t i, c_left, c_right, split;
-    AABB *left_box, *right_box;
     double cost, min_cost;
-
-    left_box = calloc(count, sizeof(AABB));
-    right_box = calloc(count, sizeof(AABB));
 
     double sa_parent = get_surface_area(arr, count);
 
@@ -146,17 +157,11 @@ BVHNode *build_tree(Object **arr, size_t count) {
         + (SA(right_box[i + 1]) / sa_parent) * c_right;
 
         if (cost < min_cost) {
-            // printf("c_left: %d, split: %d", c_left, split);
-            // printf("min_cost: %f, cost: %f\n", min_cost, cost);
-            // printf("p: %f, left: %f, right: %fz\n\n", sa_parent, SA(left_box[i]), SA(right_box[i + 1]));
             min_cost = cost;
             cmp = z_compare;
             split = c_left;
         }
     }
-
-    free(left_box);
-    free(right_box);
 
     qsort(arr, count, sizeof(Object *), cmp);
     
@@ -170,43 +175,3 @@ BVHNode *build_tree(Object **arr, size_t count) {
     );
 
 }
-
-// BVHNode *build_tree(Object **arr, size_t count) {
-//     int (*cmp)(const void *, const void *);
-//     double dx, dy, dz;
-//     size_t i, mid;
-//     Vec min, max, center;
-
-//     if (count <= 4) return create_node(NULL, NULL, arr, count);
-
-//     min = vec(INFINITY, INFINITY, INFINITY);
-//     max = vec(-INFINITY, -INFINITY, -INFINITY);
-
-//     for (i = 0; i < count; i++) {
-//         center = calc_centroid((*(arr + i))->aabb);
-//         min = v_min(min, center);
-//         max = v_max(max, center);
-//     }
-
-//     dx = max.x - min.x;
-//     dy = max.y - min.y;
-//     dz = max.z - min.z;
-
-//     if (dx >= dy && dx >= dz)
-//         cmp = x_compare;
-//     else if (dy >= dz)
-//         cmp = y_compare;
-//     else
-//         cmp = z_compare;
-
-//     qsort(arr, count, sizeof(Object *), cmp);
-
-//     mid = count / 2;
-
-//     return create_node(
-//         build_tree(arr, mid),
-//         build_tree(arr + mid, count - mid),
-//         NULL,
-//         0
-//     );
-// }
