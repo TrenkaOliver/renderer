@@ -24,6 +24,8 @@ Scene create_scene();
 size_t add_plane(Scene *scene, Vec point, Vec normal, Material *material);
 
 size_t import_mesh(Scene *scene, char *file_name);
+size_t get_material_id(char *s, DynArray *arr);
+size_t add_material(char *s, DynArray *arr, Scene *scene);
 
 size_t add_sphere(Scene *scene, Vec center, double radious, Material *material);
 

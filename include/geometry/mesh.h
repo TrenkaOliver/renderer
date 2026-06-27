@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include "geometry/object.h"
+#include "light/material.h"
 
 typedef struct Face {
     size_t v;

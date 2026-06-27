@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
 
 #include "scene/scene.h"
@@ -12,15 +13,17 @@ Material no_texture = {
 };
 
 size_t import_mesh(Scene *scene, char *file_name) {
-    FILE *f;
-    DynArray v_arr, vt_arr, vn_arr;
+    FILE *f, *m;
+    DynArray v_arr, vt_arr, vn_arr, m_idx;
     Mesh *mesh;
+    Material *active_material;
     AABB aabb;
     Vec _v, *vp, *vtp, *vnp;
     Face idx[64];
     size_t count, i, t_idx, out;
-    char line[128], *p;
+    char line[128], mtl_name[128], mtl_path[128], *p, *last_slash, *last_backslash;
     long long v, vn, vt;
+    int cc1, cc2, illum;
     
     f = fopen(file_name, "r");
     v_arr = create_dyn_array(sizeof(Vec), 64);
@@ -33,10 +36,11 @@ size_t import_mesh(Scene *scene, char *file_name) {
     mesh->rotation = vec(0.0, 0.0, 0.0);
     mesh->first_triangle = scene->objects.count;
     mesh->triangle_count = 0;
+    active_material = NULL;
 
     aabb = (AABB){.min = vec(INFINITY, INFINITY, INFINITY), .max = vec(-INFINITY, -INFINITY, -INFINITY)};
 
-    while (fgets(line, 128, f)){
+    while (fgets(line, 128, f)) {
         if (sscanf(line, "v %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
             i = grow_dyn_array(&v_arr);
             *(Vec *)get_element(i, &v_arr) = _v;
@@ -46,7 +50,53 @@ size_t import_mesh(Scene *scene, char *file_name) {
         } else if (sscanf(line, "vt %lf %lf", &_v.x, &_v.y) == 2) {
             i = grow_dyn_array(&vt_arr);
             *(Vec *)get_element(i, &vt_arr) = _v;
-        } else if (line[0] == 'f' && line[1] == ' ') {
+        } else if (sscanf(line, "mtllib %s", mtl_name) == 1) {
+            last_slash = strrchr(file_name, '/');
+            last_backslash = strrchr(file_name, '\\');
+            
+            if (!last_slash || (last_backslash && last_backslash > last_slash)) {
+                last_slash = last_backslash;
+            }
+
+            strcpy(mtl_path, file_name);
+            
+            
+            cc1 = last_slash - file_name;
+            while ((mtl_path[++cc1] = mtl_name[cc2++]));
+
+            printf("%s\n", file_name);
+            printf("%s\n", mtl_name);
+            printf("%s\n", mtl_path);
+
+            m = fopen(mtl_path, "r");
+            m_idx = create_dyn_array(sizeof(MaterialEntry), 16);
+            while (fgets(line, 128, m)) {
+                if (sscanf(line, "newmtl %s", mtl_name) == 1) {
+                    active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
+                    active_material->reflectivity = 0.0;
+                } else if (sscanf(line, "Kd %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
+                    active_material->diffuse = _v;
+                } else if (sscanf(line, "Ks %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
+                    active_material->specular = _v;
+                } else if (sscanf(line, "Ns %lf", &_v.x) == 1) {
+                    active_material->shininess = _v.x;
+                } else if (sscanf(line, "illum %d", &illum) == 1) {
+                    switch (illum) {
+                    case 0:
+                        active_material->diffuse = vec(0.0, 0.0, 0.0);
+                        active_material->specular = vec(0.0, 0.0, 0.0);
+                        break;
+                    case 1:
+                        active_material->specular = vec(0.0, 0.0, 0.0);
+                    default:
+                        break;
+                    }
+                }
+            }
+            fclose(m);
+        } else if (sscanf(line, "usemtl %s", mtl_name) == 1) {
+            active_material = get_element(get_material_id(mtl_name, &m_idx), &scene->materials);
+        }else if (line[0] == 'f' && line[1] == ' ') {
             p = line + 2;
             count = 0;
 
@@ -91,8 +141,6 @@ size_t import_mesh(Scene *scene, char *file_name) {
             vnp = vn_arr.ptr;
             vtp = vt_arr.ptr;
 
-            printf("count=%zu cap=%zu ptr=%p size=%zu\n",
-                scene->objects.count, scene->objects.capacity, scene->objects.ptr, scene->objects.size);
             for (i = 1; i < count - 1; i++) {
 
                 t_idx = add_triangle_complete(
@@ -106,7 +154,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     idx[0].vt != (size_t)-1 ? vtp[idx[0].vt] : vec(0.0, 0.0, 0.0),
                     idx[i].vt != (size_t)-1 ? vtp[idx[i].vt] : vec(0.0, 0.0, 0.0),
                     idx[i + 1].vt != (size_t)-1 ? vtp[idx[i + 1].vt] : vec(0.0, 0.0, 0.0),
-                    &no_texture
+                    active_material
                 );
                 aabb = aabb_merge(aabb, ((Object *)get_element(t_idx, &scene->objects))->aabb);
                 mesh->triangle_count++;

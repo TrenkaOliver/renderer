@@ -13,6 +13,7 @@ SRC = 	main.c \
 		src/geometry/plane.c \
 		src/geometry/sphere.c \
 		src/geometry/triangle.c \
+		src/light/material.c \
 		src/math/vec.c \
 		src/math/ray.c \
 		src/render/pixel.c \
