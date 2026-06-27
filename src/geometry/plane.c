@@ -14,16 +14,16 @@ double plane_ray_intersection(Plane *plane, Ray *ray) {
     return dot(plane->n, v_sub(plane->o, ray->o)) / denom;
 }
 
-int is_shaded_by_plane(Ray *ray, Planes *planes) {
+int is_shaded_by_plane(Ray *ray, DynArray *planes) {
     size_t i;
 
     for (i = 0; i < planes->count; i++)
-        if (plane_ray_intersection(planes->ptr + i, ray) > EPSILON) return 1;
+        if (plane_ray_intersection(planes->ptr + i * planes->size, ray) > EPSILON) return 1;
 
     return 0;
 }
 
-HitResult get_first_plane(Ray *ray, Planes *planes) {
+HitResult get_first_plane(Ray *ray, DynArray *planes) {
     double t, tc;
     size_t i;
     Plane *plane;
@@ -32,7 +32,7 @@ HitResult get_first_plane(Ray *ray, Planes *planes) {
     plane = NULL;
     
     for (i = 0; i < planes->count; i++) {
-        tc = plane_ray_intersection(planes->ptr + i, ray);
+        tc = plane_ray_intersection(planes->ptr + i * planes->size, ray);
         if (tc >= 0.0 && tc < t) {
             plane = planes->ptr + i;
             t = tc;

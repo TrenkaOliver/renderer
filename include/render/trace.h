@@ -9,8 +9,8 @@
 #include "camera/camera.h"
 #include "accel/bvh.h"
 
-HitResult get_first_plane(Ray *ray, Planes *planes);
-int is_shaded_by_plane(Ray *ray, Planes *planes);
+HitResult get_first_plane(Ray *ray, DynArray *planes);
+int is_shaded_by_plane(Ray *ray, DynArray *planes);
 
 HitResult get_first_object(Ray *ray, BVH *bvh);
 int is_shaded_by_object(Ray *ray, BVH *bvh);

@@ -8,49 +8,31 @@
 #include "geometry/plane.h"
 #include "light/light.h"
 #include "light/material.h"
-
-typedef struct Planes {
-    Plane *ptr;
-    size_t count;
-    size_t capacity;
-} Planes;
-
-typedef struct Objects {
-    Object *ptr;
-    size_t count;
-    size_t capacity;
-} Objects;
-
-typedef struct Meshes {
-    Mesh *ptr;
-    size_t count;
-    size_t capacity;
-} Meshes;
+#include "array/array.h"
 
 typedef struct Scene {
     DirectionalLight dir_light;
     Vec global_ambient;
-    Planes planes;
-    Objects objects;
-    Meshes meshes;
+    DynArray planes;
+    DynArray objects;
+    DynArray meshes;
+    DynArray materials;
 } Scene;
 
 Scene create_scene();
 
-Plane *add_plane(Scene *scene, Vec point, Vec normal, Material *material);
+size_t add_plane(Scene *scene, Vec point, Vec normal, Material *material);
 
-Object *add_object(Scene *scene);
-Mesh *add_mesh(Scene *scene);
-Mesh *inport_mesh(Scene *scene, char *file_name);
+size_t import_mesh(Scene *scene, char *file_name);
 
-Object *add_sphere(Scene *scene, Vec center, double radious, Material *material);
+size_t add_sphere(Scene *scene, Vec center, double radious, Material *material);
 
-Object *add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
-Object *add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
-Object *add_triangle_t(Scene *scene, Vec a, Vec b, Vec c, Vec ta, Vec tb, Vec tc, Material *material);
-Object *add_triangle_complete(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Vec ta, Vec tb, Vec tc, Material *material);
+size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
+size_t add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
+size_t add_triangle_t(Scene *scene, Vec a, Vec b, Vec c, Vec ta, Vec tb, Vec tc, Material *material);
+size_t add_triangle_complete(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Vec ta, Vec tb, Vec tc, Material *material);
 
-Object *add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
+size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
 
 void move_mesh(Scene *scene, Mesh *mesh, Vec delta);   
 void scale_mesh(Scene *scene, Mesh *mesh, Vec scale);

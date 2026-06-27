@@ -55,19 +55,22 @@ int main() {
 
     scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
-    Mesh *body_mesh = inport_mesh(&scene, "./models/FinalBaseMesh.obj");
-    set_mesh_rotation(&scene, body_mesh, vec(1.5, 0.0, 0.0));
-    apply_mesh_transform(body_mesh);
+    
+    size_t mesh_idx = import_mesh(&scene, "./models/Lowpoly_tree_sample.obj");
+    Mesh *mesh = get_element(mesh_idx, &scene.meshes);
 
-    scale_mesh(&scene, body_mesh, vec(2.0, 2.0, 2.0));
-    set_mesh_position(&scene, body_mesh, vec(
-        body_mesh->size.x * -0.5,
-        body_mesh->size.y * -0.5,
-        body_mesh->size.z * -0.5
+    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
+    apply_mesh_transform(mesh);
+
+    //scale_mesh(&scene, body_mesh, vec(2.0, 2.0, 2.0));
+    set_mesh_position(&scene, mesh, vec(
+        mesh->size.x * -0.5,
+        mesh->size.y * -0.5,
+        mesh->size.z * -0.5
     ));
 
-    add_sphere(&scene, body_mesh->aabb.min, 1, &green);
-    add_sphere(&scene, body_mesh->aabb.max, 1, &orange);
+    add_sphere(&scene, mesh->aabb.min, 1, &green);
+    add_sphere(&scene, mesh->aabb.max, 1, &orange);
 
     /* for (int x = -300; x <= 300; x += 60) {
     //     for (int y = 0; y <= 1200; y += 60) {
