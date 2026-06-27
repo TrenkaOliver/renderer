@@ -56,10 +56,10 @@ int main() {
     scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
     
-    size_t mesh_idx = import_mesh(&scene, "./models/Lowpoly_tree_sample.obj");
+    size_t mesh_idx = import_mesh(&scene, "./models/FinalBaseMesh.obj");
     Mesh *mesh = get_element(mesh_idx, &scene.meshes);
 
-    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
+    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, -0.5));
     apply_mesh_transform(mesh);
 
     //scale_mesh(&scene, body_mesh, vec(2.0, 2.0, 2.0));

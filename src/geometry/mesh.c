@@ -62,13 +62,12 @@ size_t import_mesh(Scene *scene, char *file_name) {
             
             
             cc1 = last_slash - file_name;
+            cc2 = 0;
             while ((mtl_path[++cc1] = mtl_name[cc2++]));
 
-            printf("%s\n", file_name);
-            printf("%s\n", mtl_name);
-            printf("%s\n", mtl_path);
-
             m = fopen(mtl_path, "r");
+            if (!m) continue;
+
             m_idx = create_dyn_array(sizeof(MaterialEntry), 16);
             while (fgets(line, 128, m)) {
                 if (sscanf(line, "newmtl %s", mtl_name) == 1) {
@@ -142,7 +141,6 @@ size_t import_mesh(Scene *scene, char *file_name) {
             vtp = vt_arr.ptr;
 
             for (i = 1; i < count - 1; i++) {
-
                 t_idx = add_triangle_complete(
                     scene,
                     vp[idx[0].v],
@@ -154,7 +152,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     idx[0].vt != (size_t)-1 ? vtp[idx[0].vt] : vec(0.0, 0.0, 0.0),
                     idx[i].vt != (size_t)-1 ? vtp[idx[i].vt] : vec(0.0, 0.0, 0.0),
                     idx[i + 1].vt != (size_t)-1 ? vtp[idx[i + 1].vt] : vec(0.0, 0.0, 0.0),
-                    active_material
+                    active_material == NULL ? active_material : &no_texture
                 );
                 aabb = aabb_merge(aabb, ((Object *)get_element(t_idx, &scene->objects))->aabb);
                 mesh->triangle_count++;
