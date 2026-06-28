@@ -8,7 +8,7 @@ double len(Vec vec) {
 Vec normalize(Vec vec) {
     double l;
 
-    if ((l = len(vec)) == 0 || l == 1) 
+    if ((l = len(vec)) == 0) 
         return vec;
     else 
         return scale(vec, 1.0 / l);

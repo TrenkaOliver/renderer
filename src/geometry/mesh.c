@@ -206,6 +206,11 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
     mesh->size = hadamard(mesh->size, scaling);
     end = mesh->first_triangle + mesh->triangle_count;
 
+    mesh->aabb = (AABB){
+        .min = vec(INFINITY, INFINITY, INFINITY), 
+        .max = vec(-INFINITY, -INFINITY, -INFINITY)
+    };
+
     for (i = mesh->first_triangle; i < end; i++) {
         delta = v_sub(ptr[i].type.triangle.a, mesh->position);
         ptr[i].type.triangle.a = v_add(mesh->position, hadamard(delta, scaling));
@@ -225,20 +230,25 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
             .min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c),
             .max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c)
         };
-    }
 
-    mesh->aabb.max = v_add(mesh->aabb.min, hadamard(v_sub(mesh->aabb.max, mesh->aabb.min), scaling));
+        mesh->aabb = aabb_merge(mesh->aabb, ptr[i].aabb);
+    }
 }
 
 void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
     size_t i, end;
-    Vec delta, min, max;
+    Vec delta;
     Object *ptr;
 
     ptr = scene->objects.ptr;
 
     mesh->rotation = v_add(mesh->rotation, rotation);
     end = mesh->first_triangle + mesh->triangle_count;
+
+    mesh->aabb = (AABB){
+        .min = vec(INFINITY, INFINITY, INFINITY), 
+        .max = vec(-INFINITY, -INFINITY, -INFINITY)
+    };
 
     for (i = mesh->first_triangle; i < end; i++) {
         delta = v_sub(ptr[i].type.triangle.a, mesh->position);
@@ -259,14 +269,9 @@ void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
             .min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c),
             .max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c)
         };
+
+        mesh->aabb = aabb_merge(mesh->aabb, ptr[i].aabb);
     }
-
-    min = mesh->aabb.min;
-    max = v_add(mesh->aabb.min, rotate(v_sub(mesh->aabb.max, mesh->aabb.min), rotation));
-
-    mesh->aabb.min = v_min(min, max);
-    mesh->aabb.max = v_max(min, max);
-
 }
 
 void set_mesh_position(Scene *scene, Mesh *mesh, Vec position) {
