@@ -5,7 +5,7 @@
 
 #include "scene/scene.h"
 
-Material no_texture = {
+Material no_material = {
     .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
     .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
     .shininess = 1,
@@ -36,7 +36,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
     mesh->rotation = vec(0.0, 0.0, 0.0);
     mesh->first_triangle = scene->objects.count;
     mesh->triangle_count = 0;
-    active_material = NULL;
+    active_material = &no_material;
 
     aabb = (AABB){.min = vec(INFINITY, INFINITY, INFINITY), .max = vec(-INFINITY, -INFINITY, -INFINITY)};
 
@@ -93,7 +93,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                 }
             }
             fclose(m);
-        } else if (sscanf(line, "usemtl %s", mtl_name) == 1) {
+        } else if (sscanf(line, "usemtl %s", mtl_name) == 1 && active_material != &no_material) {
             active_material = get_element(get_material_id(mtl_name, &m_idx), &scene->materials);
         }else if (line[0] == 'f' && line[1] == ' ') {
             p = line + 2;
@@ -152,7 +152,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     idx[0].vt != (size_t)-1 ? vtp[idx[0].vt] : vec(0.0, 0.0, 0.0),
                     idx[i].vt != (size_t)-1 ? vtp[idx[i].vt] : vec(0.0, 0.0, 0.0),
                     idx[i + 1].vt != (size_t)-1 ? vtp[idx[i + 1].vt] : vec(0.0, 0.0, 0.0),
-                    active_material == NULL ? active_material : &no_texture
+                    active_material
                 );
                 aabb = aabb_merge(aabb, ((Object *)get_element(t_idx, &scene->objects))->aabb);
                 mesh->triangle_count++;

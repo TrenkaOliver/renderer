@@ -50,13 +50,13 @@ int main() {
     if (!f) return 1;
 
     Scene scene = create_scene();
-    RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 3};
+    RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 1};
     Camera cam = create_look_at_camera(vec(0.0, -75.0, 0.0), vec(0.0, 0.0, 0.0), 1.0472);
 
     scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
     
-    size_t mesh_idx = import_mesh(&scene, "./models/FinalBaseMesh.obj");
+    size_t mesh_idx = import_mesh(&scene, "./models/Lowpoly_tree_sample.obj");
     Mesh *mesh = get_element(mesh_idx, &scene.meshes);
 
     set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, -0.5));
