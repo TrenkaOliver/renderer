@@ -5,6 +5,9 @@
 
 #include "scene/scene.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "image/stb_image.h"
+
 Material no_material = {
     .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
     .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
@@ -12,8 +15,27 @@ Material no_material = {
     .reflectivity = 0
 };
 
+void create_path(char *buff, char *file_name, char *child_name) {
+    char *last_slash, *last_backslash;
+    int cc1, cc2;
+
+    last_slash = strrchr(file_name, '/');
+    last_backslash = strrchr(file_name, '\\');
+    
+    if (!last_slash || (last_backslash && last_backslash > last_slash)) {
+        last_slash = last_backslash;
+    }
+
+    strcpy(buff, file_name);
+    
+    
+    cc1 = last_slash - file_name;
+    cc2 = 0;
+    while ((buff[++cc1] = child_name[cc2++]));
+}
+
 size_t import_mesh(Scene *scene, char *file_name) {
-    FILE *f, *m;
+    FILE *f, *m, *t;
     DynArray v_arr, vt_arr, vn_arr, m_idx;
     Mesh *mesh;
     Material *active_material;
@@ -21,9 +43,10 @@ size_t import_mesh(Scene *scene, char *file_name) {
     Vec _v, *vp, *vtp, *vnp;
     Face idx[64];
     size_t count, i, t_idx, out;
-    char line[128], mtl_name[128], mtl_path[128], *p, *last_slash, *last_backslash;
+    char line[128], mtl_name[128], mtl_path[128], texture_name[128], texture_path[128], *p, *last_slash, *last_backslash;
+    unsigned char *pixel_ptr;
     long long v, vn, vt;
-    int cc1, cc2, illum;
+    int cc1, cc2, illum, x, y;
     
     f = fopen(file_name, "r");
     v_arr = create_dyn_array(sizeof(Vec), 64);
@@ -50,21 +73,14 @@ size_t import_mesh(Scene *scene, char *file_name) {
         } else if (sscanf(line, "vt %lf %lf", &_v.x, &_v.y) == 2) {
             i = grow_dyn_array(&vt_arr);
             *(Vec *)get_element(i, &vt_arr) = _v;
-        } else if (sscanf(line, "mtllib %s", mtl_name) == 1) {
-            last_slash = strrchr(file_name, '/');
-            last_backslash = strrchr(file_name, '\\');
-            
-            if (!last_slash || (last_backslash && last_backslash > last_slash)) {
-                last_slash = last_backslash;
-            }
+        } else if (strncmp(line, "mtllib ", 7) == 0) {
+            printf("alam\n");
+            cc1 = 0;
+            cc2 = 7;
+            while((mtl_name[cc1++] = line[cc2++]) && mtl_name[cc1 - 1] != '\n');
+            if (mtl_name[cc1 - 1] == '\n') mtl_name[cc1 - 1] = '\0';
 
-            strcpy(mtl_path, file_name);
-            
-            
-            cc1 = last_slash - file_name;
-            cc2 = 0;
-            while ((mtl_path[++cc1] = mtl_name[cc2++]));
-
+            create_path(mtl_path, file_name, mtl_name);
             m = fopen(mtl_path, "r");
             if (!m) continue;
 
@@ -73,6 +89,8 @@ size_t import_mesh(Scene *scene, char *file_name) {
                 if (sscanf(line, "newmtl %s", mtl_name) == 1) {
                     active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
                     active_material->reflectivity = 0.0;
+                    active_material->diffuse_map = (size_t)-1;
+                    active_material->normal_map = (size_t)-1;
                 } else if (sscanf(line, "Kd %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
                     active_material->diffuse = _v;
                 } else if (sscanf(line, "Ks %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
@@ -90,6 +108,20 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     default:
                         break;
                     }
+                } else if (strncmp(line, "map_Kd ", 7) == 0) {
+                    cc1 = 0;
+                    cc2 = 7;
+                    while((texture_name[cc1++] = line[cc2++]) && texture_name[cc1 - 1] != '\n');
+                    if (texture_name[cc1 - 1] == '\n') texture_name[cc1 - 1] = '\0';
+                    create_path(texture_path, mtl_path, texture_name);
+                    pixel_ptr = stbi_load(texture_path, &x, &y, NULL, 3);
+                    i = grow_n_dyn_array(&scene->textures, 2 * sizeof(int) + x * y * 3);
+                    int *start = get_element(i, &scene->textures);
+                    start[0] = x;
+                    start[1] = y;
+                    memcpy(start + 2, pixel_ptr, x * y * 3);
+                    active_material->diffuse_map = i;
+                    stbi_image_free(pixel_ptr);
                 }
             }
             fclose(m);

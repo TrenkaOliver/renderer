@@ -33,12 +33,21 @@ double triangle_ray_intersection(Object *object, Ray *ray, Info *info) {
 
 HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
     Vec p, ns;
+    double d_u, d_v;
 
     p = v_add(ray->o, scale(ray->v, t));
     
     ns = object->type.triangle.const_normal
     ? object->type.triangle.ng 
     : normalize(v_add(v_add(scale(object->type.triangle.na, info->w), scale(object->type.triangle.nb, info->u)), scale(object->type.triangle.nc, info->v)));
+
+    if (object->material->diffuse_map != (size_t)-1) {
+        d_u = object->type.triangle.ta.x * info->w + object->type.triangle.tb.x * info->u + object->type.triangle.tc.x * info->v;
+        d_v = object->type.triangle.ta.y * info->w + object->type.triangle.tb.y * info->u + object->type.triangle.tc.y * info->v;
+    } else {
+        d_u = NAN;
+        d_v = NAN;
+    }
     
-    return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->m};
+    return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
 }

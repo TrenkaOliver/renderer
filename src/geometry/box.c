@@ -67,5 +67,5 @@ HitResult get_box_result(Ray *ray, Object *object, Info *info, double t) {
     else
         n = (z > 0.0) ? object->type.box.axes[2] : neg(object->type.box.axes[2]);
 
-    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->m};
+    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->material, .d_u = NAN, .d_v = NAN};
 }

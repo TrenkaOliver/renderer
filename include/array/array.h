@@ -9,4 +9,5 @@ typedef struct DynArray {
 
 DynArray create_dyn_array(size_t size, size_t capacity);
 size_t grow_dyn_array(DynArray *arr);
+size_t grow_n_dyn_array(DynArray *arr, size_t n);
 void *get_element(size_t i, DynArray *arr);

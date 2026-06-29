@@ -34,5 +34,5 @@ HitResult get_sphere_result(Ray *ray, Object *object, Info *info, double t) {
     p = v_add(ray->o, scale(ray->v, t));
     n = normalize(v_sub(p, object->type.sphere.o));
 
-    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->m};
+    return (HitResult){.point = p, .ng = n, .ns = n, .t = t, .material = object->material, .d_u = NAN, .d_v = NAN};
 }

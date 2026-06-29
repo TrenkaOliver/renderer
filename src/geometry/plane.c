@@ -43,5 +43,5 @@ HitResult get_first_plane(Ray *ray, DynArray *planes) {
 
     Vec p = v_add(ray->o, scale(ray->v, t));
 
-    return (HitResult){.point = p, .ng = plane->n, .ns = plane->n, .t = t, .material = plane->m};
+    return (HitResult){.point = p, .ng = plane->n, .ns = plane->n, .t = t, .material = plane->m, .d_u = NAN, .d_v = NAN};
 }

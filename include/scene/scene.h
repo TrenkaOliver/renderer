@@ -17,6 +17,7 @@ typedef struct Scene {
     DynArray objects;
     DynArray meshes;
     DynArray materials;
+    DynArray textures;
 } Scene;
 
 Scene create_scene();

@@ -10,6 +10,8 @@ typedef struct HitResult {
     Vec ns;
     double t;
     Material *material;
+    double d_u;
+    double d_v;
 } HitResult;
 
 typedef struct Info {

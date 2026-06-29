@@ -6,6 +6,13 @@
 #include "render/render.h"
 #include "scene/scene.h"
 
+static inline int clampi(int x, int min, int max)
+{
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
+
 HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     HitResult plane_result, object_result;
 
@@ -27,14 +34,31 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
     Ray shadow_ray, reflection_ray;
     HitResult hit;
     Vec light_reflection, ray_reflection;
-    Vec c, c_local, c_reflected, c_diffuse, c_specular, c_ambient;
+    Vec c, c_local, c_reflected, c_diffuse, c_specular, c_ambient, c_base;
     double intensity;
+    int x, y, w, h, idx;
+    unsigned char *ptr;
 
     hit = get_first_hit(ray, scene, bvh);
 
     if (hit.t < 0.0) {
         return vec(0.0, 0.0, 0.0);
     } else {
+        if (hit.material->diffuse_map != (size_t)-1) {
+            ptr = get_element(hit.material->diffuse_map, &scene->textures);
+            w = ((int *)ptr)[0];
+            h = ((int *)ptr)[1];
+            x = clampi((int)(hit.d_u * (w - 1)), 0, w - 1);
+            y = clampi((int)((1.0 - hit.d_v) * (h - 1)), 0, h - 1);
+            idx = (y * w + x) * 3 + 2 * sizeof(int);
+            c_base = vec(
+                ptr[idx] / 255.0,
+                ptr[idx + 1] / 255.0,
+                ptr[idx + 2] / 255.0
+            );
+        } else {
+            c_base = hit.material->diffuse;
+        }
         shadow_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), scene->dir_light.dir);
         
         intensity = dot(hit.ns, scene->dir_light.dir);
@@ -49,7 +73,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
             scale(
                 hadamard(
                     scene->dir_light.scaled_color, 
-                    hit.material->diffuse
+                    c_base
                 ),
                 intensity
             );
@@ -67,7 +91,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
             );
         }
 
-        c_ambient = hadamard(scene->global_ambient, hit.material->diffuse);
+        c_ambient = hadamard(scene->global_ambient, c_base);
 
         c_local = v_add(v_add(c_ambient, c_diffuse), c_specular);
 
