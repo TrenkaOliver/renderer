@@ -11,6 +11,12 @@ static AABB *left_box;
 static AABB *right_box;
 static Object **ptr_array_start;
 
+BVHNode *create_node(BVHNode *left, BVHNode *right, Object **first, size_t count);
+double get_surface_area(Object **arr, size_t count);
+double SA(AABB aabb);
+void build_boxes(Object **arr, size_t count, AABB *left_box, AABB *right_box);
+BVHNode *build_tree(Object **arr, size_t count);
+
 BVH create_bvh(Object *first, size_t count) {
     size_t i;
     BVH bvh;

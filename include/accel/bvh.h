@@ -18,9 +18,5 @@ typedef struct BVH {
 } BVH;
 
 BVH create_bvh(Object *first, size_t count);
-BVHNode *create_node(BVHNode *left, BVHNode *right, Object **first, size_t count);
-double SA(AABB aabb);
-void build_boxes(Object **arr, size_t count, AABB *left_box, AABB *right_box);
-BVHNode *build_tree(Object **arr, size_t count);
 
 #endif

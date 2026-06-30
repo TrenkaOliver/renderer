@@ -15,6 +15,9 @@ Material no_material = {
     .reflectivity = 0
 };
 
+void create_path(char *buff, char *file_name, char *child_name);
+size_t import_texture(char *line, char *mtl_path, Scene *scene);
+
 void create_path(char *buff, char *file_name, char *child_name) {
     char *last_slash, *last_backslash;
     int cc1, cc2;
@@ -34,8 +37,29 @@ void create_path(char *buff, char *file_name, char *child_name) {
     while ((buff[++cc1] = child_name[cc2++]));
 }
 
+size_t import_texture(char *line, char *mtl_path, Scene *scene) {
+    size_t i;
+    int cc1, cc2, x, y, *start;
+    unsigned char *pixel_ptr;
+    char texture_name[128], texture_path[128];
+
+    cc1 = 0;
+    cc2 = 0;
+    while((texture_name[cc1++] = line[cc2++]) && texture_name[cc1 - 1] != '\n');
+    if (texture_name[cc1 - 1] == '\n') texture_name[cc1 - 1] = '\0';
+    create_path(texture_path, mtl_path, texture_name);
+    pixel_ptr = stbi_load(texture_path, &x, &y, NULL, 3);
+    i = grow_n_dyn_array(&scene->textures, 2 * sizeof(int) + x * y * 3);
+    start = get_element(i, &scene->textures);
+    start[0] = x;
+    start[1] = y;
+    memcpy(start + 2, pixel_ptr, x * y * 3);
+    stbi_image_free(pixel_ptr);
+    return i;
+}
+
 size_t import_mesh(Scene *scene, char *file_name) {
-    FILE *f, *m, *t;
+    FILE *f, *m;
     DynArray v_arr, vt_arr, vn_arr, m_idx;
     Mesh *mesh;
     Material *active_material;
@@ -43,10 +67,9 @@ size_t import_mesh(Scene *scene, char *file_name) {
     Vec _v, *vp, *vtp, *vnp;
     Face idx[64];
     size_t count, i, t_idx, out;
-    char line[128], mtl_name[128], mtl_path[128], texture_name[128], texture_path[128], *p, *last_slash, *last_backslash;
-    unsigned char *pixel_ptr;
+    char line[128], mtl_name[128], mtl_path[128], *p;
     long long v, vn, vt;
-    int cc1, cc2, illum, x, y;
+    int cc1, cc2, illum;
     
     f = fopen(file_name, "r");
     v_arr = create_dyn_array(sizeof(Vec), 64);
@@ -109,19 +132,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                         break;
                     }
                 } else if (strncmp(line, "map_Kd ", 7) == 0) {
-                    cc1 = 0;
-                    cc2 = 7;
-                    while((texture_name[cc1++] = line[cc2++]) && texture_name[cc1 - 1] != '\n');
-                    if (texture_name[cc1 - 1] == '\n') texture_name[cc1 - 1] = '\0';
-                    create_path(texture_path, mtl_path, texture_name);
-                    pixel_ptr = stbi_load(texture_path, &x, &y, NULL, 3);
-                    i = grow_n_dyn_array(&scene->textures, 2 * sizeof(int) + x * y * 3);
-                    int *start = get_element(i, &scene->textures);
-                    start[0] = x;
-                    start[1] = y;
-                    memcpy(start + 2, pixel_ptr, x * y * 3);
-                    active_material->diffuse_map = i;
-                    stbi_image_free(pixel_ptr);
+                    active_material->diffuse_map = import_texture(line + 7, mtl_path, scene);
                 }
             }
             fclose(m);
