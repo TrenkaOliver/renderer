@@ -4,8 +4,6 @@
 #include <ctype.h>
 
 #include "scene/scene.h"
-
-#define STB_IMAGE_IMPLEMENTATION
 #include "image/stb_image.h"
 
 Material no_material = {
@@ -97,7 +95,6 @@ size_t import_mesh(Scene *scene, char *file_name) {
             i = grow_dyn_array(&vt_arr);
             *(Vec *)get_element(i, &vt_arr) = _v;
         } else if (strncmp(line, "mtllib ", 7) == 0) {
-            printf("alam\n");
             cc1 = 0;
             cc2 = 7;
             while((mtl_name[cc1++] = line[cc2++]) && mtl_name[cc1 - 1] != '\n');
