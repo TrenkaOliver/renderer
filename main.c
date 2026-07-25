@@ -43,15 +43,15 @@ Material green = {
 int main() {
     clock_t start = clock();
 
-    int width = 1920;
-    int height = 1080;
+    int width = 256;
+    int height = 144;
 
     FILE *f = fopen("result.ppm", "wb");
     if (!f) return 1;
 
     Scene scene = create_scene();
     RenderSettings settings = {.width = width, .height = height, .max_depth = 0, .aa_samples = 1};
-    Camera cam = create_look_at_camera(vec(60.0, -60.0, 60.0), vec(0.0, 0.0, 0.0), 1.0472);
+    Camera cam = create_look_at_camera(vec(20.0, -20.0, 20.0), vec(0.0, 0.0, 0.0), 1.0472);
 
     scene.dir_light.dir = normalize(vec(-0.1, -0.3, 1.0));
 
