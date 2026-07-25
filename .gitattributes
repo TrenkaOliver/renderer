@@ -1,0 +1,3 @@
+*.h linguist-language=C
+*.c linguist-language=C
+include/image/stb_image.h linguist-vendored
