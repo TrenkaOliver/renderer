@@ -61,7 +61,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
         }
         shadow_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), scene->dir_light.dir);
         
-        intensity = dot(hit.ns, scene->dir_light.dir);
+        intensity = fabs(dot(hit.ns, scene->dir_light.dir));
         light_reflection = normalize(v_sub(scene->dir_light.dir, scale(hit.ns, 2.0 * dot(hit.ns, scene->dir_light.dir))));
 
         if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0.0) {

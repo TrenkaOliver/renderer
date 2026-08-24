@@ -1,41 +1,53 @@
 #include <math.h>
 #include "geometry/aabb.h"
 
+void vecf_min(float *src, float *dst) {
+    dst[0] = fminf(dst[0], src[0]);
+    dst[1] = fminf(dst[1], src[1]);
+    dst[2] = fminf(dst[2], src[2]);
+}
+
+void vecf_max(float *src, float *dst) {
+    dst[0] = fmaxf(dst[0], src[0]);
+    dst[1] = fmaxf(dst[1], src[1]);
+    dst[2] = fmaxf(dst[2], src[2]);
+}
+
+void vecf_min3(float *src1, float *src2, float *dst) {
+    dst[0] = fminf(src1[0], src2[0]);
+    dst[1] = fminf(src1[1], src2[1]);
+    dst[2] = fminf(src1[2], src2[2]);
+}
+
+void vecf_max3(float *src1, float *src2, float *dst) {
+    dst[0] = fmaxf(src1[0], src2[0]);
+    dst[1] = fmaxf(src1[1], src2[1]);
+    dst[2] = fmaxf(src1[2], src2[2]);
+}
+
+void vecf_add(float *src, float *dst) {
+    dst[0] += src[0];
+    dst[1] += src[1];
+    dst[2] += src[2];
+}
+
+void vecf_sub(float *src, float *dst) {
+    dst[0] -= src[0];
+    dst[1] -= src[1];
+    dst[2] -= src[2];
+}
+
 AABB aabb_merge(AABB a, AABB b) {
     return (AABB){
-        .min = v_min(a.min, b.min),
-        .max = v_max(a.max, b.max),
+        .min = {fminf(a.min[0], b.min[0]), fminf(a.min[1], b.min[1]), fminf(a.min[2], b.min[2])},
+        .max = {fmaxf(a.max[0], b.max[0]), fmaxf(a.max[1], b.max[1]), fmaxf(a.max[2], b.max[2])}
     };
 }
 
 Vec calc_centroid(AABB aabb) {
-    return scale(v_add(aabb.min, aabb.max), 0.5);
-}
-
-double aabb_ray_intersection(AABB *aabb, Ray *ray) {
-    double tx0, tx1, ty0, ty1, tz0, tz1, t_min, t_max;
-
-    tx0 = (aabb->min.x - ray->o.x) * ray->inv_v.x;
-    tx1 = (aabb->max.x - ray->o.x) * ray->inv_v.x;
-
-    t_min = fmin(tx0, tx1);
-    t_max = fmax(tx0, tx1);
-
-    ty0 = (aabb->min.y - ray->o.y) * ray->inv_v.y;
-    ty1 = (aabb->max.y - ray->o.y) * ray->inv_v.y;
-
-    t_min = fmax(t_min, fmin(ty0, ty1));
-    t_max = fmin(t_max, fmax(ty0, ty1));
-
-    if (t_min > t_max) return -1.0;
-    
-    tz0 = (aabb->min.z - ray->o.z) * ray->inv_v.z;
-    tz1 = (aabb->max.z - ray->o.z) * ray->inv_v.z;
-
-    t_min = fmax(t_min, fmin(tz0, tz1));
-    t_max = fmin(t_max, fmax(tz0, tz1));
-
-    if (t_min > t_max || t_max < 0.0) return -1.0;
-
-    return t_min >= 0.0 ? t_min : t_max;
+    return (Vec){
+        .x = (aabb.min[0] + aabb.max[0]) / 2.0,
+        .y = (aabb.min[1] + aabb.max[1]) / 2.0,
+        .z = (aabb.min[2] + aabb.max[2]) / 2.0
+    };
 }

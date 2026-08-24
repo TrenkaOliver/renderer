@@ -1,0 +1,100 @@
+ Percent |	Source code & Disassembly of app for L1-dcache-load-misses (6100 samples, percent: local period)
+----------------------------------------------------------------------------------------------------------------
+         : 0    0x4540 <aabb_ray_intersection>:
+    0.03 :   4540:        endbr64
+    0.00 :   4544:        pushq   %r15
+    0.37 :   4546:        pushq   %r14
+    0.47 :   4548:        pushq   %rbp
+    0.60 :   4549:        movq    %rsi, %rbp
+    0.00 :   454c:        pushq   %rbx
+    0.05 :   454d:        movq    %rdi, %rbx
+    0.02 :   4550:        subq    $0x28, %rsp
+    0.00 :   4554:        movsd   (%rsi), %xmm3
+    0.35 :   4558:        movsd   (%rdi), %xmm2
+   34.53 :   455c:        movsd   0x18(%rdi), %xmm1
+    0.11 :   4561:        movsd   0x30(%rsi), %xmm0
+    0.03 :   4566:        subsd   %xmm3, %xmm2
+    3.85 :   456a:        subsd   %xmm3, %xmm1
+    0.34 :   456e:        mulsd   %xmm0, %xmm2
+    6.82 :   4572:        mulsd   %xmm0, %xmm1
+    0.42 :   4576:        movapd  %xmm2, %xmm0
+    0.00 :   457a:        movsd   %xmm2, (%rsp)
+    1.06 :   457f:        movsd   %xmm1, 0x8(%rsp)
+    1.61 :   4585:        callq   0x2440 <_init+0x440>
+    0.00 :   458a:        movsd   0x8(%rsp), %xmm1
+    2.89 :   4590:        movq    %xmm0, %r14
+    0.02 :   4595:        movsd   (%rsp), %xmm0
+    0.08 :   459a:        callq   0x22d0 <_init+0x2d0>
+    0.00 :   459f:        movsd   0x8(%rbp), %xmm1
+    0.00 :   45a4:        movsd   0x8(%rbx), %xmm2
+    0.00 :   45a9:        movsd   0x20(%rbx), %xmm3
+    1.05 :   45ae:        movq    %xmm0, %r15
+    0.00 :   45b3:        movsd   0x38(%rbp), %xmm0
+    1.32 :   45b8:        subsd   %xmm1, %xmm2
+    0.01 :   45bc:        subsd   %xmm1, %xmm3
+    0.03 :   45c0:        mulsd   %xmm0, %xmm2
+    0.10 :   45c4:        mulsd   %xmm0, %xmm3
+    0.15 :   45c8:        movapd  %xmm2, %xmm0
+    0.00 :   45cc:        movsd   %xmm2, 0x8(%rsp)
+    0.05 :   45d2:        movapd  %xmm3, %xmm1
+    0.00 :   45d6:        movsd   %xmm3, 0x10(%rsp)
+    1.18 :   45dc:        callq   0x2440 <_init+0x440>
+    0.00 :   45e1:        movq    %r14, %xmm1
+    0.00 :   45e6:        callq   0x22d0 <_init+0x2d0>
+    0.10 :   45eb:        movsd   0x10(%rsp), %xmm1
+    0.25 :   45f1:        movsd   %xmm0, (%rsp)
+    0.04 :   45f6:        movsd   0x8(%rsp), %xmm0
+    0.06 :   45fc:        callq   0x22d0 <_init+0x2d0>
+    0.08 :   4601:        movq    %r15, %xmm1
+    0.02 :   4606:        callq   0x2440 <_init+0x440>
+    0.45 :   460b:        movsd   (%rsp), %xmm6
+    0.52 :   4610:        comisd  %xmm0, %xmm6
+    4.62 :   4614:        ja      0x46c8 <aabb_ray_intersection+0x188>
+    2.38 :   461a:        movsd   0x10(%rbp), %xmm1
+    0.63 :   461f:        movsd   0x10(%rbx), %xmm2
+    0.00 :   4624:        movapd  %xmm0, %xmm4
+    0.00 :   4628:        movsd   0x28(%rbx), %xmm3
+    0.02 :   462d:        movsd   0x40(%rbp), %xmm0
+    0.00 :   4632:        movsd   %xmm4, 0x18(%rsp)
+    0.14 :   4638:        subsd   %xmm1, %xmm2
+    0.27 :   463c:        subsd   %xmm1, %xmm3
+    1.24 :   4640:        mulsd   %xmm0, %xmm2
+    2.06 :   4644:        mulsd   %xmm0, %xmm3
+    0.69 :   4648:        movapd  %xmm2, %xmm0
+    0.00 :   464c:        movsd   %xmm2, 0x8(%rsp)
+    0.02 :   4652:        movapd  %xmm3, %xmm1
+    0.00 :   4656:        movsd   %xmm3, 0x10(%rsp)
+    0.72 :   465c:        callq   0x2440 <_init+0x440>
+    0.06 :   4661:        movsd   (%rsp), %xmm1
+    0.02 :   4666:        callq   0x22d0 <_init+0x2d0>
+    0.68 :   466b:        movsd   0x10(%rsp), %xmm1
+    3.35 :   4671:        movsd   %xmm0, (%rsp)
+    0.05 :   4676:        movsd   0x8(%rsp), %xmm0
+    0.26 :   467c:        callq   0x22d0 <_init+0x2d0>
+    0.22 :   4681:        movsd   0x18(%rsp), %xmm1
+    0.07 :   4687:        callq   0x2440 <_init+0x440>
+    0.95 :   468c:        movsd   (%rsp), %xmm5
+    0.29 :   4691:        movapd  %xmm0, %xmm1
+    0.00 :   4695:        comisd  %xmm0, %xmm5
+    5.04 :   4699:        ja      0x46c8 <aabb_ray_intersection+0x188>
+    1.76 :   469b:        pxor    %xmm0, %xmm0
+    1.18 :   469f:        comisd  %xmm1, %xmm0
+    0.59 :   46a3:        ja      0x46c8 <aabb_ray_intersection+0x188>
+    0.27 :   46a5:        cmpnlesd        %xmm5, %xmm0
+    0.05 :   46aa:        addq    $0x28, %rsp
+    0.00 :   46ae:        popq    %rbx
+    1.01 :   46af:        popq    %rbp
+    0.00 :   46b0:        popq    %r14
+    0.13 :   46b2:        popq    %r15
+    0.00 :   46b4:        andpd   %xmm0, %xmm1
+    0.12 :   46b8:        andnpd  %xmm5, %xmm0
+    0.00 :   46bc:        orpd    %xmm1, %xmm0
+    0.04 :   46c0:        retq
+    0.00 :   46c1:        nopl    (%rax)
+    0.34 :   46c8:        movsd   0x282c8(%rip), %xmm0  # 0x2c998
+   10.06 :   46d0:        addq    $0x28, %rsp
+    0.00 :   46d4:        popq    %rbx
+    1.09 :   46d5:        popq    %rbp
+    0.02 :   46d6:        popq    %r14
+    0.48 :   46d8:        popq    %r15
+    0.03 :   46da:        retq

@@ -1,4 +1,5 @@
 #include <math.h>
+#include <float.h>
 
 #include "geometry/plane.h"
 #include "render/trace.h"
@@ -28,7 +29,7 @@ HitResult get_first_plane(Ray *ray, DynArray *planes) {
     size_t i;
     Plane *plane;
 
-    t = INFINITY;
+    t = DBL_MAX;
     plane = NULL;
     
     for (i = 0; i < planes->count; i++) {

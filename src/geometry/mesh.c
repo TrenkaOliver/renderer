@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <float.h>
 
 #include "scene/scene.h"
 #include "image/stb_image.h"
@@ -82,7 +83,10 @@ size_t import_mesh(Scene *scene, char *file_name) {
     mesh->triangle_count = 0;
     active_material = &no_material;
 
-    aabb = (AABB){.min = vec(INFINITY, INFINITY, INFINITY), .max = vec(-INFINITY, -INFINITY, -INFINITY)};
+    aabb = (AABB){
+        .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
+        .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
+    };
 
     while (fgets(line, 128, f)) {
         if (sscanf(line, "v %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
@@ -202,8 +206,8 @@ size_t import_mesh(Scene *scene, char *file_name) {
 
 
 
-    mesh->position = aabb.min;
-    mesh->size = v_sub(aabb.max, aabb.min);
+    mesh->position = vec(aabb.min[0], aabb.min[1], aabb.min[2]);
+    mesh->size = vec(aabb.max[0] - aabb.min[0], aabb.max[1] - aabb.min[1], aabb.max[2] - aabb.min[2]);
     mesh->aabb = aabb;
     
     free(v_arr.ptr);
@@ -218,27 +222,28 @@ size_t import_mesh(Scene *scene, char *file_name) {
 void move_mesh(Scene *scene, Mesh *mesh, Vec delta) {
     Object *ptr;
     size_t i, end;
-    
+    float delta_f[3] = {delta.x, delta.y, delta.z};
+
     ptr = scene->objects.ptr;
 
     mesh->position = v_add(mesh->position, delta);
     end = mesh->first_triangle + mesh->triangle_count;
 
     for (i = mesh->first_triangle; i < end; i++) {
-        ptr[i].aabb.min = v_add(ptr[i].aabb.min, delta);
-        ptr[i].aabb.max = v_add(ptr[i].aabb.max, delta);
+        vecf_add(delta_f, ptr[i].aabb.min);
+        vecf_add(delta_f, ptr[i].aabb.max);
         ptr[i].type.triangle.a = v_add(ptr[i].type.triangle.a, delta);
         ptr[i].type.triangle.b = v_add(ptr[i].type.triangle.b, delta);
         ptr[i].type.triangle.c = v_add(ptr[i].type.triangle.c, delta);
     }
 
-    mesh->aabb.min = v_add(mesh->aabb.min, delta);
-    mesh->aabb.max = v_add(mesh->aabb.max, delta);
+    vecf_add(delta_f, mesh->aabb.min);
+    vecf_add(delta_f, mesh->aabb.max);
 }
 
 void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
     size_t i, end;
-    Vec delta;
+    Vec delta, min, max;
     Object *ptr;
 
     ptr = scene->objects.ptr;
@@ -247,8 +252,8 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
     end = mesh->first_triangle + mesh->triangle_count;
 
     mesh->aabb = (AABB){
-        .min = vec(INFINITY, INFINITY, INFINITY), 
-        .max = vec(-INFINITY, -INFINITY, -INFINITY)
+        .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
+        .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
     };
 
     for (i = mesh->first_triangle; i < end; i++) {
@@ -266,9 +271,12 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
         ptr[i].type.triangle.nb = normalize(hadamard(ptr[i].type.triangle.nb, reciproc(scaling)));
         ptr[i].type.triangle.nc = normalize(hadamard(ptr[i].type.triangle.nc, reciproc(scaling)));
 
+        min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c);
+        max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c);
+
         ptr[i].aabb = (AABB) {
-            .min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c),
-            .max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c)
+            .min = {min.x, min.y, min.z},
+            .max = {max.x, max.y, max.z}
         };
 
         mesh->aabb = aabb_merge(mesh->aabb, ptr[i].aabb);
@@ -277,7 +285,7 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
 
 void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
     size_t i, end;
-    Vec delta;
+    Vec delta, min, max;
     Object *ptr;
 
     ptr = scene->objects.ptr;
@@ -286,8 +294,8 @@ void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
     end = mesh->first_triangle + mesh->triangle_count;
 
     mesh->aabb = (AABB){
-        .min = vec(INFINITY, INFINITY, INFINITY), 
-        .max = vec(-INFINITY, -INFINITY, -INFINITY)
+        .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
+        .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
     };
 
     for (i = mesh->first_triangle; i < end; i++) {
@@ -305,9 +313,12 @@ void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
         ptr[i].type.triangle.nb = normalize(rotate(ptr[i].type.triangle.nb, rotation));
         ptr[i].type.triangle.nc = normalize(rotate(ptr[i].type.triangle.nc, rotation));
 
+        min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c);
+        max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c);
+
         ptr[i].aabb = (AABB) {
-            .min = v_min(v_min(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c),
-            .max = v_max(v_max(ptr[i].type.triangle.a, ptr[i].type.triangle.b), ptr[i].type.triangle.c)
+            .min = {min.x, min.y, min.z},
+            .max = {max.x, max.y, max.z}
         };
 
         mesh->aabb = aabb_merge(mesh->aabb, ptr[i].aabb);
@@ -336,15 +347,13 @@ void set_mesh_rotation(Scene *scene, Mesh *mesh, Vec rotation) {
 }
 
 void apply_mesh_transform(Mesh *mesh) {
-    Vec min, max;
+    float min[3] = {mesh->aabb.min[0], mesh->aabb.min[1], mesh->aabb.min[2]};
+    float max[3] = {mesh->aabb.max[0], mesh->aabb.max[1], mesh->aabb.max[2]};
 
-    min = mesh->aabb.min;
-    max = mesh->aabb.max;
-
-    mesh->aabb.min = v_min(min, max);
-    mesh->aabb.max = v_max(min, max);
+    vecf_min3(min, max, mesh->aabb.min);
+    vecf_max3(min, max, mesh->aabb.max);
     
-    mesh->position = mesh->aabb.min;
-    mesh->size = v_sub(mesh->aabb.max, mesh->aabb.min);
+    mesh->position = vec(mesh->aabb.min[0], mesh->aabb.min[1], mesh->aabb.min[2]);
+    mesh->size = v_sub(vec(mesh->aabb.max[0], mesh->aabb.max[1], mesh->aabb.max[2]), mesh->position);
     mesh->rotation = vec(0.0, 0.0, 0.0);
 }

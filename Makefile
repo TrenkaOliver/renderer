@@ -1,6 +1,8 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -O3 -Iinclude -MMD -MP
+CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -flto -ffast-math
+
+LDLIBS = -lm
 
 OUT = app
 
@@ -32,16 +34,15 @@ DEP = $(OBJ:.o=.d)
 all: $(OUT)
 
 $(OUT): $(OBJ)
-	$(CC) $(OBJ) -o $(OUT)
+	$(CC) $(OBJ) -o $(OUT) $(LDLIBS)
 
 build/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	if exist build rmdir /S /Q build
-	if exist $(OUT).exe del $(OUT).exe
-	if exist $(OUT) del $(OUT)
+	rm -rf build
+	rm -f $(OUT)
 
 re: clean all
 

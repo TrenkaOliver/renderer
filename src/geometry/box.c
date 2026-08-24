@@ -1,4 +1,5 @@
 #include <math.h>
+#include <float.h>
 #include "geometry/object.h"
 
 #define EPSILON 1e-8
@@ -10,8 +11,8 @@ double box_ray_intersection(Object *object, Ray *ray, Info *info) {
 
     p = v_sub(object->type.box.center, ray->o);
 
-    t_min = -INFINITY;
-    t_max = INFINITY;
+    t_min = -DBL_MAX;
+    t_max = DBL_MAX;
 
     for (i = 0; i < 3; i++) {
         e = dot(object->type.box.axes[i], p);

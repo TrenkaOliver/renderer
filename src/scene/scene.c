@@ -57,8 +57,8 @@ size_t add_sphere(Scene *scene, Vec o, double r, Material *m) {
             .r = r
         },
         .aabb = {
-            .min = v_sub(o, vec(r, r, r)),
-            .max = v_add(o, vec(r, r, r))
+            .min = {o.x - r, o.y - r, o.z - r},
+            .max = {o.x + r, o.y + r, o.z + r}
         },
         .material = m,
         .get_ray_intersection = sphere_ray_intersection,
@@ -85,8 +85,8 @@ size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
             .ng = normalize(cross(v_sub(b, a), v_sub(c, a)))
         },
         .aabb = {
-            .min = v_min(v_min(a, b), c),
-            .max = v_max(v_max(a, b), c)
+            .min = {fminf(fminf(a.x, b.x), c.x), fminf(fminf(a.y, b.y), c.y), fminf(fminf(a.z, b.z), c.z)},
+            .max = {fmaxf(fmaxf(a.x, b.x), c.x), fmaxf(fmaxf(a.y, b.y), c.y), fmaxf(fmaxf(a.z, b.z), c.z)}
         },
         .material = m,
         .get_ray_intersection = triangle_ray_intersection,
@@ -184,8 +184,10 @@ size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m) 
         fabs(ptr->type.box.axes[1].z) * ptr->type.box.half_size.y +
         fabs(ptr->type.box.axes[2].z) * ptr->type.box.half_size.z;
 
-    ptr->aabb.min = v_sub(ptr->type.box.center, r);
-    ptr->aabb.max = v_add(ptr->type.box.center, r);
+    ptr->aabb = (AABB){
+        .min = {position.x - r.x, position.y - r.y, position.z - r.z},
+        .max = {position.x + r.x, position.y + r.y, position.z + r.z}
+    };
 
     ptr->material = m;
 

@@ -1,20 +1,20 @@
 #ifndef BVH_H
 #define BVH_H
 
-#include <stdint.h>
-
 #include "geometry/aabb.h"
 #include "geometry/object.h"
 
 typedef struct BVHNode {
+    struct BVHNode *left;
+    struct BVHNode *right;
     AABB aabb;
-    uint32_t first_primitive_or_right_child;
-    uint32_t primitive_count;
+    Object **first_primitive;
+    size_t primitive_count;
 } BVHNode;
 
 typedef struct BVH {
-    BVHNode *nodes;
-    Object **objects;
+    Object **ptr_array;
+    BVHNode *root;
 } BVH;
 
 BVH create_bvh(Object *first, size_t count);

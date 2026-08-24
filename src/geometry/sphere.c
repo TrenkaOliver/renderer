@@ -1,4 +1,5 @@
 #include <math.h>
+#include <float.h>
 #include "geometry/object.h"
 
 double sphere_ray_intersection(Object *object, Ray *ray, Info *info) {
@@ -18,12 +19,12 @@ double sphere_ray_intersection(Object *object, Ray *ray, Info *info) {
     t1 = (-b + sqrt(d)) / (2.0 * a);
     t2 = (-b - sqrt(d)) / (2.0 * a);
 
-    t = INFINITY;
+    t = DBL_MAX;
 
     if (t1 > 0.0 && t1 < t) t = t1;
     if (t2 > 0.0 && t2 < t) t = t2;
 
-    if (t == INFINITY) return -1.0;
+    if (t == DBL_MAX) return -1.0;
 
     return t;
 }
