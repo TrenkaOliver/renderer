@@ -8,19 +8,52 @@
 #include "camera/camera.h"
 #include "math/vec.h"
 
+
+/*
+ * ============================================================
+ * Primitive toggles
+ * ============================================================
+ *
+ * 1 = generate
+ * 0 = don't generate
+ *
+ * Every cell is still processed regardless of these settings.
+ *
+ * Therefore, disabling a primitive simply leaves its cells empty.
+ *
+ * With all three set to 1, the generated scene is identical
+ * to the original scene.
+ */
+
+#define GENERATE_SPHERES   1
+#define GENERATE_BOXES     1
+#define GENERATE_TRIANGLES 1
+
+
+/*
+ * ============================================================
+ * Object counts
+ * ============================================================
+ */
+
 #define TOTAL_OBJECTS 500000
 
 #define SPHERE_COUNT   166667
 #define BOX_COUNT      166667
 #define TRIANGLE_COUNT 166666
 
+
 /*
- * Grid:
+ * ============================================================
+ * Grid
+ * ============================================================
  *
- * 100 x 100 x 50 = 500,000 objects
+ * 100 x 100 x 50 = 500,000 cells
  *
- * Each object gets one cell.
+ * Each cell gets assigned a primitive type.
+ * Disabled primitive types simply leave their cell empty.
  */
+
 #define GRID_X 100
 #define GRID_Y 100
 #define GRID_Z 50
@@ -38,6 +71,7 @@
 
 static uint32_t rng_state = 0x12345678u;
 
+
 static uint32_t rng_u32(void)
 {
     rng_state ^= rng_state << 13;
@@ -46,6 +80,7 @@ static uint32_t rng_u32(void)
 
     return rng_state;
 }
+
 
 static double random_double(double min, double max)
 {
@@ -157,7 +192,6 @@ int main(void)
 
     const int width = 640;
     const int height = 360;
-    const double zoom = 0.01;
 
     FILE *f = fopen("result.ppm", "wb");
 
@@ -180,11 +214,8 @@ int main(void)
 
         /*
          * Primary rays only.
-         *
-         * Use max_depth = 3 later when you want to benchmark
-         * reflections/secondary rays as well.
          */
-        .max_depth = 2  ,
+        .max_depth = 2,
 
         .aa_samples = 1
     };
@@ -199,14 +230,16 @@ int main(void)
      */
 
     Camera cam = create_look_at_camera(
-        vec(0.0, -4000.0 * zoom, 3000.0 * zoom),
-        vec(0.0, 2500.0, 400.0),
+        vec(50.0, 50.0, 10.0),
+        vec(0.0, 14000.0, 4000.0),
         1.0472
     );
 
 
     /*
-     * Directional light.
+     * ============================================================
+     * Directional light
+     * ============================================================
      */
 
     scene.dir_light.dir =
@@ -222,16 +255,20 @@ int main(void)
      * Object generation
      * ============================================================
      *
-     * Every primitive gets its own cell.
+     * IMPORTANT:
      *
-     * This means objects are:
+     * The loop ALWAYS processes all 500,000 cells.
      *
-     *   - mixed together
-     *   - spatially separated
-     *   - deterministic
-     *   - varied in size
+     * The primitive type is ALWAYS selected using:
      *
-     * No primitive type gets its own region.
+     *     index % 3
+     *
+     * exactly as in the original scene.
+     *
+     * If the selected primitive is disabled, nothing is spawned.
+     *
+     * Random numbers are still consumed before the decision,
+     * keeping the RNG sequence identical between configurations.
      */
 
     int spheres = 0;
@@ -268,21 +305,27 @@ int main(void)
 
 
                 /*
-                 * Small positional jitter.
+                 * ------------------------------------------------
+                 * Positional jitter
+                 * ------------------------------------------------
                  *
-                 * Maximum ±20 while cells are 100 units apart.
+                 * These random calls happen regardless of which
+                 * primitive is enabled.
                  */
+
                 px += random_double(-20.0, 20.0);
                 py += random_double(-20.0, 20.0);
                 pz += random_double(-20.0, 20.0);
 
 
                 /*
-                 * Different objects have different sizes.
+                 * ------------------------------------------------
+                 * Object size
+                 * ------------------------------------------------
                  *
-                 * Maximum diameter is still considerably smaller
-                 * than the 100-unit cell spacing.
+                 * Also generated regardless of primitive type.
                  */
+
                 double size =
                     random_double(15.0, 35.0);
 
@@ -292,33 +335,16 @@ int main(void)
                  * Select primitive
                  * =================================================
                  *
-                 * Exactly:
+                 * This is exactly the original distribution:
                  *
-                 * 166667 spheres
-                 * 166667 boxes
-                 * 166666 triangles
+                 *   index % 3 == 0 -> sphere
+                 *   index % 3 == 1 -> box
+                 *   index % 3 == 2 -> triangle
+                 *
+                 * Disabled types simply result in no object.
                  */
 
-                int type;
-
-                if (spheres < SPHERE_COUNT &&
-                    boxes < BOX_COUNT &&
-                    triangles < TRIANGLE_COUNT) {
-
-                    type = index % 3;
-
-                } else if (spheres < SPHERE_COUNT) {
-
-                    type = 0;
-
-                } else if (boxes < BOX_COUNT) {
-
-                    type = 1;
-
-                } else {
-
-                    type = 2;
-                }
+                int type = index % 3;
 
 
                 /*
@@ -329,6 +355,8 @@ int main(void)
 
                 if (type == 0) {
 
+#if GENERATE_SPHERES
+
                     add_sphere(
                         &scene,
                         vec(px, py, pz),
@@ -337,6 +365,8 @@ int main(void)
                     );
 
                     spheres++;
+
+#endif
                 }
 
 
@@ -347,6 +377,8 @@ int main(void)
                  */
 
                 else if (type == 1) {
+
+#if GENERATE_BOXES
 
                     /*
                      * Non-uniform dimensions.
@@ -373,10 +405,6 @@ int main(void)
 
                     /*
                      * Random rotation.
-                     *
-                     * Assumes your add_box() rotation argument
-                     * uses Euler angles like the rest of your
-                     * renderer.
                      */
 
                     Vec rotation = vec(
@@ -418,6 +446,8 @@ int main(void)
                     );
 
                     boxes++;
+
+#endif
                 }
 
 
@@ -428,6 +458,8 @@ int main(void)
                  */
 
                 else {
+
+#if GENERATE_TRIANGLES
 
                     /*
                      * Variable triangle dimensions.
@@ -447,7 +479,7 @@ int main(void)
 
 
                     /*
-                     * Randomly deform the triangle in 3D.
+                     * Randomly deform triangle in 3D.
                      */
 
                     Vec v0 = vec(
@@ -486,6 +518,8 @@ int main(void)
                     );
 
                     triangles++;
+
+#endif
                 }
             }
         }
@@ -513,6 +547,7 @@ int main(void)
      */
 
     clock_t end = clock();
+
 
     printf(
         "Spheres:   %d\n",
