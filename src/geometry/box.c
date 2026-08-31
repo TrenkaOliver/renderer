@@ -46,6 +46,47 @@ double box_ray_intersection(Object *object, Ray *ray, Info *info) {
     return t_min >= 0.0 ? t_min : t_max;
 }
 
+__m256 packed_box_ray_intersection(Object *object, PackedRay *ray, PackedInfo *info) {
+    ps_Vec p = ps_v_sub(ps_from_vec(object->type.box.center), ray->o);
+
+    __m256 neg_zero = _mm256_set1_ps(-0.0f);
+    __m256 zero = _mm256_setzero_ps();
+    __m256 one = _mm256_set1_ps(1.0f);
+    
+    __m256 t_min = _mm256_set1_ps(-FLT_MAX);
+    __m256 t_max = _mm256_set1_ps(FLT_MAX);
+
+    __m256 valid = _mm256_cmp_ps(zero, zero, _CMP_EQ_OQ);
+
+    for (int i = 0; i < 3; i++) {
+        ps_Vec axis = ps_from_vec(object->type.box.axes[i]);
+        __m256 e = ps_dot(axis, p);
+        __m256 f = ps_dot(axis, ray->v);
+        __m256 inv_f = _mm256_div_ps(one, f);
+        __m256 h = _mm256_set1_ps(i == 0 ? object->type.box.half_size.x : i == 1 ? object->type.box.half_size.y : object->type.box.half_size.z);
+
+        __m256 f_good = _mm256_cmp_ps(_mm256_andnot_ps(neg_zero, f), _mm256_set1_ps(EPSILON), _CMP_GE_OQ);
+        __m256 e_good = _mm256_cmp_ps(_mm256_andnot_ps(neg_zero, e), h, _CMP_LE_OQ);
+
+        valid = _mm256_and_ps(valid, _mm256_or_ps(f_good, e_good));
+
+        __m256 t1 = _mm256_mul_ps(_mm256_sub_ps(e, h), inv_f);
+        __m256 t2 = _mm256_mul_ps(_mm256_add_ps(e, h), inv_f);
+
+        t_min = _mm256_blendv_ps(t_min, _mm256_max_ps(_mm256_min_ps(t1, t2), t_min), f_good);
+        t_max = _mm256_blendv_ps(t_max, _mm256_min_ps(_mm256_max_ps(t1, t2), t_max), f_good);
+
+        valid = _mm256_and_ps(valid, _mm256_cmp_ps(t_min, t_max, _CMP_LE_OQ));
+    }
+
+    valid = _mm256_and_ps(valid, _mm256_cmp_ps(t_max, zero, _CMP_GE_OQ));
+
+    __m256 change = _mm256_cmp_ps(t_min, zero, _CMP_LT_OQ);
+    __m256 t = _mm256_blendv_ps(t_min, t_max, change);
+
+    return _mm256_blendv_ps(_mm256_set1_ps(-1.0f), t, valid);
+}
+
 HitResult get_box_result(Ray *ray, Object *object, Info *info, double t) {
     Vec p, dist, n;
     double x, y, z, ax, ay, az;

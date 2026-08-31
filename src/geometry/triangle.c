@@ -31,6 +31,38 @@ double triangle_ray_intersection(Object *object, Ray *ray, Info *info) {
     return t;
 }
 
+__m256 packed_triangle_ray_intersection(Object *object, PackedRay *ray, Info *info) {
+    ps_Vec a = ps_from_vec(object->type.triangle.a);
+    ps_Vec b = ps_from_vec(object->type.triangle.b);
+    ps_Vec c = ps_from_vec(object->type.triangle.c);
+
+    ps_Vec ab = ps_v_sub(b, a);
+    ps_Vec ac = ps_v_sub(c, a);
+    ps_Vec ao = ps_v_sub(ray->o, a);
+
+    ps_Vec cross_ao_ab = ps_cross(ao, ab);
+    ps_Vec cross_ray_v_ac = ps_cross(ray->v, ac);
+    
+    __m256 zero = _mm256_setzero_ps();
+    __m256 one = _mm256_set1_ps(1.0f);
+
+    __m256 denom = ps_dot(ab, cross_ray_v_ac);
+    __m256 inv_denom = _mm256_div_ps(one, denom);
+    __m256 valid = _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.0f), denom), _mm256_set1_ps(EPSILON), _CMP_GE_OQ);
+
+    __m256 u = _mm256_mul_ps(ps_dot(ao, cross_ray_v_ac), inv_denom);
+    valid = _mm256_and_ps(valid, _mm256_cmp_ps(u, zero, _CMP_GE_OQ));
+
+    __m256 v = _mm256_mul_ps(ps_dot(ray->v, cross_ao_ab), inv_denom);
+    valid = _mm256_and_ps(valid, _mm256_cmp_ps(v, zero, _CMP_GE_OQ));
+
+    valid = _mm256_and_ps(valid, _mm256_cmp_ps(_mm256_add_ps(u, v), one, _CMP_LE_OQ));
+
+    __m256 t = _mm256_mul_ps(ps_dot(ac, cross_ao_ab), inv_denom);
+
+    return _mm256_blendv_ps(_mm256_set1_ps(-1.0f), t, valid);
+}
+
 HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
     Vec p, ns;
     double d_u, d_v;

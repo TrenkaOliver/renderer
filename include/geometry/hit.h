@@ -2,6 +2,7 @@
 #define HIT_H
 
 #include "math/vec.h"
+#include "math/packed_vec.h"
 #include "light/material.h"
 
 typedef struct HitResult {
@@ -19,6 +20,22 @@ typedef struct Info {
     double v;
     double w;
 } Info;
+
+typedef struct PackedHitResult {
+    ps_Vec point;
+    ps_Vec ng;
+    ps_Vec ns;
+    __m256 t;
+    Material *material[8];
+    __m256 d_u;
+    __m256 d_v;
+} PackedHitResult;
+
+typedef struct PackedInfo {
+    __m256 u;
+    __m256 v;
+    __m256 w;
+} PackedInfo;
 
 
 #endif

@@ -3,12 +3,12 @@
 
 #include "math/packed_vec.h"
 
-typedef struct ps_Ray {
+typedef struct PackedRay {
     ps_Vec o;
     ps_Vec v;
     ps_Vec inv_v;
-} ps_Ray;
+} PackedRay;
 
-ps_Ray create_ray(ps_Vec o, ps_Vec v);
+PackedRay ps_create_ray(ps_Vec o, ps_Vec v);
 
 #endif

@@ -61,7 +61,7 @@ size_t add_sphere(Scene *scene, Vec o, double r, Material *m) {
             .max = {o.x + r, o.y + r, o.z + r}
         },
         .material = m,
-        .get_ray_intersection = sphere_ray_intersection,
+        .get_ray_intersection = packed_sphere_ray_intersection,
         .get_hit_result = get_sphere_result
     };
 
@@ -89,7 +89,7 @@ size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
             .max = {fmaxf(fmaxf(a.x, b.x), c.x), fmaxf(fmaxf(a.y, b.y), c.y), fmaxf(fmaxf(a.z, b.z), c.z)}
         },
         .material = m,
-        .get_ray_intersection = triangle_ray_intersection,
+        .get_ray_intersection = packed_triangle_ray_intersection,
         .get_hit_result = get_triangle_result
     };
 
@@ -191,7 +191,7 @@ size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m) 
 
     ptr->material = m;
 
-    ptr->get_ray_intersection = box_ray_intersection;
+    ptr->get_ray_intersection = packed_box_ray_intersection;
     ptr->get_hit_result = get_box_result;
 
     return i;
