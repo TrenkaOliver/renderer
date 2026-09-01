@@ -8,7 +8,7 @@
 #define C_TRAVELSAL 1
 #define C_INTERSECT 1
 #define BIN_COUNT 32
-#define LEAF_SIZE 4
+#define LEAF_SIZE 8
 
 typedef struct Bin {
     AABB aabb;
@@ -156,9 +156,8 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             if (left_count[i] == 0 || right_count[i + 1] == 0) continue;
 
             float cost = 
-            C_TRAVELSAL +
-            (SA(left_bounds[i]) / parent_sa) * left_count[i] * C_INTERSECT +
-            (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1] * C_INTERSECT;
+            (SA(left_bounds[i]) / parent_sa) * left_count[i] +
+            (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1];
             
             if (cost < best_cost) {
                 best_cost = cost;
@@ -204,4 +203,136 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
 
     create_node(right_child, 0, idx);
     return next_free;
+}
+
+uint32_t bvh8node_count = 0;
+uint32_t bvh8node_capacity = 32;
+BVH8Node *bvh8nodes;
+
+
+BVH8Tree create_bvh8_tree(Object *first, size_t count) {
+    BVH bvh = create_bvh(first, count);
+
+    bvh8nodes = malloc(bvh8node_capacity * sizeof(BVH8Node));
+    collapse_bvh_node(&bvh, 0);
+
+    BVH8Tree bvh8tree = {
+        .nodes = bvh8nodes,
+        .objects = ptr_array
+    };
+
+    free(nodes);
+
+    return bvh8tree;
+}
+
+uint32_t collapse_bvh_node(BVH *bvh, uint32_t idx) {
+    AABB bounds[8];
+    uint32_t indices[8];
+    uint8_t primitive_count[8] = {0};
+    uint8_t count;
+
+    indices[0] = idx + 1;
+    bounds[0] = bvh->nodes[indices[0]].aabb;
+    primitive_count[0] = bvh->nodes[indices[0]].primitive_count;
+    
+    indices[1] = bvh->nodes[idx].first_primitive_or_right_child;
+    bounds[1] = bvh->nodes[indices[1]].aabb;
+    primitive_count[1] = bvh->nodes[indices[1]].primitive_count;
+
+    count = 2;
+
+    while (count < 8) {
+        float lowes_cost = FLT_MAX;
+        float current_cost = 0.0;
+        int best_split = -1;
+
+        for (uint32_t i = 0; i < count; i++)
+            current_cost += SA(bounds[i]);
+
+        for (int i = 0; i < count; i++) {
+            float cost = 0.0;
+
+            if (primitive_count[i]) continue;
+
+            cost = 
+            current_cost
+            - SA(bounds[i])
+            + SA(bvh->nodes[indices[i] + 1].aabb)
+            + SA(bvh->nodes[bvh->nodes[indices[i]].first_primitive_or_right_child].aabb);
+
+            if (cost < lowes_cost) {
+                best_split = i;
+                lowes_cost = cost;
+            }
+        }
+
+        if (best_split == -1) break;
+
+        indices[count] = bvh->nodes[indices[best_split]].first_primitive_or_right_child;
+        bounds[count] = bvh->nodes[indices[count]].aabb;
+        primitive_count[count] = bvh->nodes[indices[count]].primitive_count;
+        if (primitive_count[count]) indices[count] = bvh->nodes[indices[count]].first_primitive_or_right_child;
+
+        indices[best_split] += 1;
+        bounds[best_split] = bvh->nodes[indices[best_split]].aabb;
+        primitive_count[best_split] = bvh->nodes[indices[best_split]].primitive_count;
+        if (primitive_count[best_split]) indices[best_split] = bvh->nodes[indices[best_split]].first_primitive_or_right_child;
+
+        count++;
+    }
+
+    int left = 0;
+    int right = count - 1;
+
+    while (left <= right) {
+        while (left < count && !primitive_count[left]) left++;
+        while (right >= 0 && primitive_count[right]) right--;
+
+        if (left < right) {
+            uint32_t tmp_index = indices[left];
+            indices[left] = indices[right];
+            indices[right] = tmp_index;
+
+            AABB tmp_bounds = bounds[left];
+            bounds[left] = bounds[right];
+            bounds[right] = tmp_bounds;
+
+            uint8_t tmp_leaf = primitive_count[left];
+            primitive_count[left] = primitive_count[right];
+            primitive_count[right] = tmp_leaf;
+
+            left++;
+            right--;
+        }
+    }
+
+    if (bvh8node_count == bvh8node_capacity) {
+        bvh8node_capacity *= 2;
+        bvh8nodes = realloc(bvh8nodes, bvh8node_capacity * sizeof(BVH8Node));
+    }
+
+    uint32_t node_index = bvh8node_count++;    
+    uint32_t child_indices[8];
+    
+    for (int i = 0; i < left; i++) {
+        child_indices[i] = collapse_bvh_node(bvh, indices[i]);
+    }    
+    
+    BVH8Node *node_ptr = bvh8nodes + node_index;
+
+    for (int i = 0; i < left; i++) {
+        indices[i] = child_indices[i];
+    }
+    
+    for (int i = 0; i < count; i++) {
+        node_ptr->idx[i] = indices[i];
+        node_ptr->bounds[i] = bounds[i];
+        node_ptr->primitive_count[i] = primitive_count[i];
+    }
+    
+    node_ptr->internal_count = left;
+    node_ptr->leaf_count = count - left;
+
+    return node_index;
 }
