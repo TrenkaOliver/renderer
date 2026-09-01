@@ -50,8 +50,9 @@ size_t add_plane(Scene *scene, Vec o, Vec n, Material *m) {
 
 size_t add_sphere(Scene *scene, Vec o, double r, Material *m) {
     size_t i = grow_dyn_array(&scene->objects);
+    Object *ptr = (Object *)get_element(i, &scene->objects);
 
-    *(Object *)get_element(i, &scene->objects) = (Object){
+    *ptr = (Object){
         .type.sphere = {
             .o = o,
             .r = r
@@ -64,6 +65,12 @@ size_t add_sphere(Scene *scene, Vec o, double r, Material *m) {
         .get_ray_intersection = sphere_ray_intersection,
         .get_hit_result = get_sphere_result
     };
+
+    Vec centroid = calc_centroid(ptr->aabb);
+    ptr->centroid[0] = centroid.x;
+    ptr->centroid[1] = centroid.y;
+    ptr->centroid[2] = centroid.z;
+
 
     return i;
 }
@@ -92,6 +99,11 @@ size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
         .get_ray_intersection = triangle_ray_intersection,
         .get_hit_result = get_triangle_result
     };
+
+    Vec centroid = calc_centroid(ptr->aabb);
+    ptr->centroid[0] = centroid.x;
+    ptr->centroid[1] = centroid.y;
+    ptr->centroid[2] = centroid.z;
 
     return i;
 }
@@ -188,6 +200,11 @@ size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *m) 
         .min = {position.x - r.x, position.y - r.y, position.z - r.z},
         .max = {position.x + r.x, position.y + r.y, position.z + r.z}
     };
+
+    Vec centroid = calc_centroid(ptr->aabb);
+    ptr->centroid[0] = centroid.x;
+    ptr->centroid[1] = centroid.y;
+    ptr->centroid[2] = centroid.z;
 
     ptr->material = m;
 

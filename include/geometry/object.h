@@ -16,6 +16,7 @@ typedef struct Object {
         Box box;
     } type;
     AABB aabb;
+    float centroid[3];
     Material *material;
     double (*get_ray_intersection)(struct Object *, Ray *, Info *);
     HitResult (*get_hit_result)(Ray *, struct Object *, Info *, double);

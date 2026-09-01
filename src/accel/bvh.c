@@ -5,7 +5,15 @@
 #include "accel/bvh.h"
 #include "accel/cmp.h"
 
-#define C_TRAVEL 1
+#define C_TRAVELSAL 1
+#define C_INTERSECT 1
+#define BIN_COUNT 32
+#define LEAF_SIZE 4
+
+typedef struct Bin {
+    AABB aabb;
+    uint32_t count;
+} Bin;
 
 static AABB *left_box;
 static AABB *right_box;
@@ -101,81 +109,201 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
 }
 
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
-    int (*cmp)(const void *, const void *);
-    uint32_t count, i, c_left, c_right, split, right_child, next_free;
-    float cost, min_cost, sa_parent;
+    uint32_t count = end - start;
+    
+    if (count <= LEAF_SIZE) return create_node(start, count, idx);
+    
+    Bin bins[BIN_COUNT];
+    uint32_t i;
+    float parent_sa = get_surface_area(start, end);
+    float best_cost = FLT_MAX;
+    float best_inv_width;
+    float best_cent_min;
+    int best_split;
+    int best_axis;
 
-    count = end - start;
-    sa_parent = get_surface_area(start, end);
+    for (int axis = 0; axis < 3; axis++) {
+        for (i = 0; i < BIN_COUNT; i++) {
+            bins[i] = (Bin) {
+                .aabb = (AABB) {
+                    .min = {FLT_MAX, FLT_MAX, FLT_MAX},
+                    .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
+                },
+                .count = 0
+            };
+        }
 
-    if (count <= 4) return create_node(start, count, idx);
-
-    min_cost = FLT_MAX;
-    split = 0;
-
-    qsort(ptr_array + start, count, sizeof(Object *), x_compare);
-    build_boxes(start, end, left_box, right_box);
-
-    for (i = start; i < end - 1; i++) {
-        c_left = i - start + 1;
-        c_right = end - i - 1;
-
-        cost = 
-        1
-        + (SA(left_box[i]) / sa_parent) * c_left
-        + (SA(right_box[i + 1]) / sa_parent) * c_right;
-
+        float cent_min = FLT_MAX;
+        float cent_max = -FLT_MAX;
         
-        if (cost < min_cost) {
-            min_cost = cost;
-            cmp = x_compare;
-            split = c_left;
+        for (i = start; i < end; i++) {
+            cent_min = fminf(cent_min, ptr_array[i]->centroid[axis]);
+            cent_max = fmaxf(cent_max, ptr_array[i]->centroid[axis]);
+        }
+        
+        if (cent_min == cent_max) continue;
+
+        float inv_width = BIN_COUNT / (cent_max - cent_min);
+
+        for (i = start; i < end; i++) {
+            int bin = (int)((ptr_array[i]->centroid[axis] - cent_min) * inv_width);
+            if (bin >= BIN_COUNT) bin = BIN_COUNT - 1;
+            bins[bin].aabb = aabb_merge(bins[bin].aabb, ptr_array[i]->aabb);
+            bins[bin].count++;
+        }
+
+        AABB left_bounds[BIN_COUNT];
+        uint32_t left_count[BIN_COUNT];
+
+        left_bounds[0] = bins[0].aabb;
+        left_count[0] = bins[0].count;
+
+        for (i = 1; i < BIN_COUNT; i++) {
+            left_bounds[i] = aabb_merge(left_bounds[i - 1], bins[i].aabb);
+            left_count[i] = left_count[i - 1] + bins[i].count;
+        }
+
+        AABB right_bounds[BIN_COUNT];
+        uint32_t right_count[BIN_COUNT];
+
+        right_bounds[BIN_COUNT - 1] = bins[BIN_COUNT - 1].aabb;
+        right_count[BIN_COUNT - 1] = bins[BIN_COUNT - 1].count;
+
+        for (i = BIN_COUNT - 2; i != (uint32_t)-1; i--) {
+            right_bounds[i] = aabb_merge(right_bounds[i + 1], bins[i].aabb);
+            right_count[i] = right_count[i + 1] + bins[i].count;
+        }
+
+        for (i = 0; i < BIN_COUNT - 1; i++) {
+            if (left_count[i] == 0 || right_count[i + 1] == 0) continue;
+
+            float cost = 
+            C_TRAVELSAL +
+            (SA(left_bounds[i]) / parent_sa) * left_count[i] * C_INTERSECT +
+            (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1] * C_INTERSECT;
+            
+            if (cost < best_cost) {
+                best_cost = cost;
+                best_cent_min = cent_min;
+                best_inv_width = inv_width;
+                best_split = i;
+                best_axis = axis;                
+            }
         }
     }
 
-    qsort(ptr_array + start, count, sizeof(Object *), y_compare);
-    build_boxes(start, end, left_box, right_box);
+    uint32_t left = start;
+    uint32_t right = end - 1;
+    int bin;
 
-    for (i = start; i < end - 1; i++) {
-        c_left = i - start + 1;
-        c_right = end - i - 1;
+    while (left <= right) {
+        while (left < end) {
+            bin = (int)((ptr_array[left]->centroid[best_axis] - best_cent_min) * best_inv_width);
+            if (bin > best_split) break;
 
-        cost = 
-        1
-        + (SA(left_box[i]) / sa_parent) * c_left
-        + (SA(right_box[i + 1]) / sa_parent) * c_right;
+            left++;
+        }
 
-        if (cost < min_cost) {
-            min_cost = cost;
-            cmp = y_compare;
-            split = c_left;
+        while (right >= start) {
+            bin = (int)((ptr_array[right]->centroid[best_axis] - best_cent_min) * best_inv_width);
+            if (bin <= best_split) break;
+
+            right--;
+        }
+
+        if (left < right) {
+            Object *tmp = ptr_array[left];
+            ptr_array[left] = ptr_array[right];
+            ptr_array[right] = tmp;
+            
+            left++;
+            right--;
         }
     }
 
-    qsort(ptr_array + start, count, sizeof(Object *), z_compare);
-    build_boxes(start, end, left_box, right_box);
-
-    for (i = start; i < end - 1; i++) {
-        c_left = i - start + 1;
-        c_right = end - i - 1;
-
-        cost = 
-        1
-        + (SA(left_box[i]) / sa_parent) * c_left
-        + (SA(right_box[i + 1]) / sa_parent) * c_right;
-
-        if (cost < min_cost) {
-            min_cost = cost;
-            cmp = z_compare;
-            split = c_left;
-        }
-    }
-
-    qsort(ptr_array + start, count, sizeof(Object *), cmp);
-
-    right_child = build_tree(start, start + split, idx + 1);
-    next_free = build_tree(start + split, end, right_child);
+    uint32_t right_child = build_tree(start, left, idx + 1);
+    uint32_t next_free = build_tree(left, end, right_child);
 
     create_node(right_child, 0, idx);
     return next_free;
 }
+
+// uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
+//     int (*cmp)(const void *, const void *);
+//     uint32_t count, i, c_left, c_right, split, right_child, next_free;
+//     float cost, min_cost, sa_parent;
+
+//     count = end - start;
+//     sa_parent = get_surface_area(start, end);
+
+//     if (count <= 4) return create_node(start, count, idx);
+
+//     min_cost = FLT_MAX;
+//     split = 0;
+
+//     qsort(ptr_array + start, count, sizeof(Object *), x_compare);
+//     build_boxes(start, end, left_box, right_box);
+
+//     for (i = start; i < end - 1; i++) {
+//         c_left = i - start + 1;
+//         c_right = end - i - 1;
+
+//         cost = 
+//         1
+//         + (SA(left_box[i]) / sa_parent) * c_left
+//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
+
+        
+//         if (cost < min_cost) {
+//             min_cost = cost;
+//             cmp = x_compare;
+//             split = c_left;
+//         }
+//     }
+
+//     qsort(ptr_array + start, count, sizeof(Object *), y_compare);
+//     build_boxes(start, end, left_box, right_box);
+
+//     for (i = start; i < end - 1; i++) {
+//         c_left = i - start + 1;
+//         c_right = end - i - 1;
+
+//         cost = 
+//         1
+//         + (SA(left_box[i]) / sa_parent) * c_left
+//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
+
+//         if (cost < min_cost) {
+//             min_cost = cost;
+//             cmp = y_compare;
+//             split = c_left;
+//         }
+//     }
+
+//     qsort(ptr_array + start, count, sizeof(Object *), z_compare);
+//     build_boxes(start, end, left_box, right_box);
+
+//     for (i = start; i < end - 1; i++) {
+//         c_left = i - start + 1;
+//         c_right = end - i - 1;
+
+//         cost = 
+//         1
+//         + (SA(left_box[i]) / sa_parent) * c_left
+//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
+
+//         if (cost < min_cost) {
+//             min_cost = cost;
+//             cmp = z_compare;
+//             split = c_left;
+//         }
+//     }
+
+//     qsort(ptr_array + start, count, sizeof(Object *), cmp);
+
+//     right_child = build_tree(start, start + split, idx + 1);
+//     next_free = build_tree(start + split, end, right_child);
+
+//     create_node(right_child, 0, idx);
+//     return next_free;
+// }

@@ -230,8 +230,8 @@ int main(void)
      */
 
     Camera cam = create_look_at_camera(
-        vec(50.0, 50.0, 10.0),
-        vec(0.0, 14000.0, 4000.0),
+        vec(0.0, -1000.0, 500.0),
+        vec(0.0, 0.0, 500.0),
         1.0472
     );
 
