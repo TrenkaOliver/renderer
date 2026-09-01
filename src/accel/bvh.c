@@ -15,14 +15,11 @@ typedef struct Bin {
     uint32_t count;
 } Bin;
 
-static AABB *left_box;
-static AABB *right_box;
 static Object **ptr_array;
 static BVHNode *nodes;
 
 float get_surface_area(uint32_t start, uint32_t end);
 float SA(AABB aabb);
-void build_boxes(uint32_t start, uint32_t end, AABB *left_box, AABB *right_box);
 uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx);
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx);
 
@@ -32,15 +29,10 @@ BVH create_bvh(Object *first, size_t count) {
 
     bvh.nodes = nodes = calloc(count * 2 - 1, sizeof(BVHNode));
     bvh.objects = ptr_array = calloc(count, sizeof(Object *));
-    left_box = calloc(count, sizeof(AABB));
-    right_box = calloc(count, sizeof(AABB));
 
     for (i = 0; i < count; i++) ptr_array[i] = first + i;
 
     build_tree(0, count, 0);
-    
-    free(left_box);
-    free(right_box);
 
     return bvh;
 }
@@ -68,20 +60,6 @@ float SA(AABB aabb) {
     
 
     return 2 * (x * y + x * z + y * z);
-}
-
-void build_boxes(uint32_t start, uint32_t end, AABB *left_box, AABB *right_box) {
-    uint32_t i;
-
-    left_box[start] = ptr_array[start]->aabb;
-    for (i = start + 1; i < end - 1; i++) {
-        left_box[i] = aabb_merge(left_box[i - 1], ptr_array[i]->aabb);
-    }
-
-    right_box[end - 1] = ptr_array[end - 1]->aabb;
-    for (i = end - 1; i-- > start;) {
-        right_box[i] = aabb_merge(right_box[i + 1], ptr_array[i]->aabb);
-    }
 }
 
 uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
@@ -227,83 +205,3 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
     create_node(right_child, 0, idx);
     return next_free;
 }
-
-// uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
-//     int (*cmp)(const void *, const void *);
-//     uint32_t count, i, c_left, c_right, split, right_child, next_free;
-//     float cost, min_cost, sa_parent;
-
-//     count = end - start;
-//     sa_parent = get_surface_area(start, end);
-
-//     if (count <= 4) return create_node(start, count, idx);
-
-//     min_cost = FLT_MAX;
-//     split = 0;
-
-//     qsort(ptr_array + start, count, sizeof(Object *), x_compare);
-//     build_boxes(start, end, left_box, right_box);
-
-//     for (i = start; i < end - 1; i++) {
-//         c_left = i - start + 1;
-//         c_right = end - i - 1;
-
-//         cost = 
-//         1
-//         + (SA(left_box[i]) / sa_parent) * c_left
-//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
-
-        
-//         if (cost < min_cost) {
-//             min_cost = cost;
-//             cmp = x_compare;
-//             split = c_left;
-//         }
-//     }
-
-//     qsort(ptr_array + start, count, sizeof(Object *), y_compare);
-//     build_boxes(start, end, left_box, right_box);
-
-//     for (i = start; i < end - 1; i++) {
-//         c_left = i - start + 1;
-//         c_right = end - i - 1;
-
-//         cost = 
-//         1
-//         + (SA(left_box[i]) / sa_parent) * c_left
-//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
-
-//         if (cost < min_cost) {
-//             min_cost = cost;
-//             cmp = y_compare;
-//             split = c_left;
-//         }
-//     }
-
-//     qsort(ptr_array + start, count, sizeof(Object *), z_compare);
-//     build_boxes(start, end, left_box, right_box);
-
-//     for (i = start; i < end - 1; i++) {
-//         c_left = i - start + 1;
-//         c_right = end - i - 1;
-
-//         cost = 
-//         1
-//         + (SA(left_box[i]) / sa_parent) * c_left
-//         + (SA(right_box[i + 1]) / sa_parent) * c_right;
-
-//         if (cost < min_cost) {
-//             min_cost = cost;
-//             cmp = z_compare;
-//             split = c_left;
-//         }
-//     }
-
-//     qsort(ptr_array + start, count, sizeof(Object *), cmp);
-
-//     right_child = build_tree(start, start + split, idx + 1);
-//     next_free = build_tree(start + split, end, right_child);
-
-//     create_node(right_child, 0, idx);
-//     return next_free;
-// }
