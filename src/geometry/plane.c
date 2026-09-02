@@ -4,8 +4,6 @@
 #include "geometry/plane.h"
 #include "render/trace.h"
 
-#define EPSILON 1e-8
-
 double plane_ray_intersection(Plane *plane, Ray *ray) {
     double denom;
 

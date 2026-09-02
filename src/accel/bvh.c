@@ -22,6 +22,7 @@ float get_surface_area(uint32_t start, uint32_t end);
 float SA(AABB aabb);
 uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx);
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx);
+uint32_t collapse_bvh_node(BVH *bvh, uint32_t idx);
 
 BVH create_bvh(Object *first, size_t count) {
     size_t i;

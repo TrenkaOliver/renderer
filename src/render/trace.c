@@ -13,7 +13,7 @@ static inline int clampi(int x, int min, int max)
     return x;
 }
 
-HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
+HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh) {
     HitResult plane_result, object_result;
 
     plane_result = get_first_plane(ray, &scene->planes);
@@ -25,12 +25,12 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH *bvh) {
     return object_result.t < plane_result.t ? object_result : plane_result;
 }
 
-int is_shaded(Ray *ray, Scene *scene, BVH *bvh) {
+int is_shaded(Ray *ray, Scene *scene, BVH8Tree *bvh) {
     return  is_shaded_by_plane(ray, &scene->planes) ||
             is_shaded_by_object(ray, bvh);
 }
 
-Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH *bvh, int depth) {
+Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     Ray shadow_ray, reflection_ray;
     HitResult hit;
     Vec light_reflection, ray_reflection;

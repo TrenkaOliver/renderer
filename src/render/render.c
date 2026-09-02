@@ -16,7 +16,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     Pixel p;
     Vec c;
     Ray ray;
-    BVH bvh;
+    BVH8Tree bvh;
 
     clock_t bvh_start = clock();
 
@@ -36,7 +36,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
-    bvh = create_bvh(scene->objects.ptr, scene->objects.count);
+    bvh = create_bvh8_tree(scene->objects.ptr, scene->objects.count);
 
     clock_t bvh_end = clock();
 
