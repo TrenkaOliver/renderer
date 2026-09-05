@@ -11,36 +11,11 @@
 
 /*
  * ============================================================
- * Primitive toggles
- * ============================================================
- *
- * 1 = generate
- * 0 = don't generate
- *
- * Every cell is still processed regardless of these settings.
- *
- * Therefore, disabling a primitive simply leaves its cells empty.
- *
- * With all three set to 1, the generated scene is identical
- * to the original scene.
- */
-
-#define GENERATE_SPHERES   1
-#define GENERATE_BOXES     1
-#define GENERATE_TRIANGLES 1
-
-
-/*
- * ============================================================
- * Object counts
+ * Object count
  * ============================================================
  */
 
 #define TOTAL_OBJECTS 500000
-
-#define SPHERE_COUNT   166667
-#define BOX_COUNT      166667
-#define TRIANGLE_COUNT 166666
 
 
 /*
@@ -48,10 +23,7 @@
  * Grid
  * ============================================================
  *
- * 100 x 100 x 50 = 500,000 cells
- *
- * Each cell gets assigned a primitive type.
- * Disabled primitive types simply leave their cell empty.
+ * 100 x 100 x 50 = 500,000 triangles
  */
 
 #define GRID_X 100
@@ -212,9 +184,6 @@ int main(void)
         .width = width,
         .height = height,
 
-        /*
-         * Primary rays only.
-         */
         .max_depth = 2,
 
         .aa_samples = 1
@@ -225,8 +194,6 @@ int main(void)
      * ============================================================
      * Camera
      * ============================================================
-     *
-     * Looking down the long Y axis.
      */
 
     Camera cam = create_look_at_camera(
@@ -252,28 +219,28 @@ int main(void)
 
     /*
      * ============================================================
-     * Object generation
+     * Triangle generation
      * ============================================================
      *
-     * IMPORTANT:
+     * Exactly 500,000 triangles:
      *
-     * The loop ALWAYS processes all 500,000 cells.
+     *     100 x 100 x 50
      *
-     * The primitive type is ALWAYS selected using:
+     * The spatial distribution is the same as the triangle
+     * portion of the previous test scene.
      *
-     *     index % 3
+     * Materials are distributed deterministically:
      *
-     * exactly as in the original scene.
+     *     index % 4 == 0 -> sphere material
+     *     index % 4 == 1 -> box material
+     *     index % 4 == 2 -> triangle material
+     *     index % 4 == 3 -> ground material
      *
-     * If the selected primitive is disabled, nothing is spawned.
-     *
-     * Random numbers are still consumed before the decision,
-     * keeping the RNG sequence identical between configurations.
+     * This gives approximately 125,000 triangles of each
+     * material.
      */
 
-    int spheres = 0;
-    int boxes = 0;
-    int triangles = 0;
+    int material_counts[4] = {0, 0, 0, 0};
 
 
     for (int x = 0; x < GRID_X; x++) {
@@ -308,9 +275,6 @@ int main(void)
                  * ------------------------------------------------
                  * Positional jitter
                  * ------------------------------------------------
-                 *
-                 * These random calls happen regardless of which
-                 * primitive is enabled.
                  */
 
                 px += random_double(-20.0, 20.0);
@@ -320,207 +284,95 @@ int main(void)
 
                 /*
                  * ------------------------------------------------
-                 * Object size
+                 * Triangle dimensions
                  * ------------------------------------------------
-                 *
-                 * Also generated regardless of primitive type.
                  */
 
-                double size =
-                    random_double(15.0, 35.0);
-
-
-                /*
-                 * =================================================
-                 * Select primitive
-                 * =================================================
-                 *
-                 * This is exactly the original distribution:
-                 *
-                 *   index % 3 == 0 -> sphere
-                 *   index % 3 == 1 -> box
-                 *   index % 3 == 2 -> triangle
-                 *
-                 * Disabled types simply result in no object.
-                 */
-
-                int type = index % 3;
-
-
-                /*
-                 * =================================================
-                 * SPHERE
-                 * =================================================
-                 */
-
-                if (type == 0) {
-
-#if GENERATE_SPHERES
-
-                    add_sphere(
-                        &scene,
-                        vec(px, py, pz),
-                        size,
-                        &sphere_mat
+                double w =
+                    random_double(
+                        20.0,
+                        60.0
                     );
 
-                    spheres++;
+                double h =
+                    random_double(
+                        20.0,
+                        60.0
+                    );
 
-#endif
+
+                /*
+                 * ------------------------------------------------
+                 * Triangle geometry
+                 * ------------------------------------------------
+                 */
+
+                Vec v0 = vec(
+                    px - w * 0.5,
+                    py - h * 0.5,
+                    pz
+                );
+
+
+                Vec v1 = vec(
+                    px + w * 0.5,
+                    py,
+                    pz + random_double(
+                        -20.0,
+                         20.0
+                    )
+                );
+
+
+                Vec v2 = vec(
+                    px,
+                    py + h * 0.5,
+                    pz + random_double(
+                        -20.0,
+                         20.0
+                    )
+                );
+
+
+                /*
+                 * ------------------------------------------------
+                 * Material distribution
+                 * ------------------------------------------------
+                 */
+
+                Material *material;
+
+                switch (index % 3) {
+
+                    case 0:
+                        material = &sphere_mat;
+                        material_counts[0]++;
+                        break;
+
+                    case 1:
+                        material = &box_mat;
+                        material_counts[1]++;
+                        break;
+
+                    case 2:
+                        material = &triangle_mat;
+                        material_counts[2]++;
+                        break;
+
+                    default:
+                        material = &ground_mat;
+                        material_counts[3]++;
+                        break;
                 }
 
 
-                /*
-                 * =================================================
-                 * BOX
-                 * =================================================
-                 */
-
-                else if (type == 1) {
-
-#if GENERATE_BOXES
-
-                    /*
-                     * Non-uniform dimensions.
-                     */
-
-                    double sx =
-                        random_double(
-                            20.0,
-                            2.0 * size
-                        );
-
-                    double sy =
-                        random_double(
-                            20.0,
-                            2.0 * size
-                        );
-
-                    double sz =
-                        random_double(
-                            20.0,
-                            2.0 * size
-                        );
-
-
-                    /*
-                     * Random rotation.
-                     */
-
-                    Vec rotation = vec(
-                        random_double(
-                            -0.5,
-                            0.5
-                        ),
-
-                        random_double(
-                            -0.5,
-                            0.5
-                        ),
-
-                        random_double(
-                            -0.5,
-                            0.5
-                        )
-                    );
-
-
-                    add_box(
-                        &scene,
-
-                        vec(
-                            px - sx * 0.5,
-                            py - sy * 0.5,
-                            pz - sz * 0.5
-                        ),
-
-                        rotation,
-
-                        vec(
-                            sx,
-                            sy,
-                            sz
-                        ),
-
-                        &box_mat
-                    );
-
-                    boxes++;
-
-#endif
-                }
-
-
-                /*
-                 * =================================================
-                 * TRIANGLE
-                 * =================================================
-                 */
-
-                else {
-
-#if GENERATE_TRIANGLES
-
-                    /*
-                     * Variable triangle dimensions.
-                     */
-
-                    double w =
-                        random_double(
-                            20.0,
-                            60.0
-                        );
-
-                    double h =
-                        random_double(
-                            20.0,
-                            60.0
-                        );
-
-
-                    /*
-                     * Randomly deform triangle in 3D.
-                     */
-
-                    Vec v0 = vec(
-                        px - w * 0.5,
-                        py - h * 0.5,
-                        pz
-                    );
-
-
-                    Vec v1 = vec(
-                        px + w * 0.5,
-                        py,
-                        pz + random_double(
-                            -20.0,
-                             20.0
-                        )
-                    );
-
-
-                    Vec v2 = vec(
-                        px,
-                        py + h * 0.5,
-                        pz + random_double(
-                            -20.0,
-                             20.0
-                        )
-                    );
-
-
-                    add_triangle(
-                        &scene,
-                        v0,
-                        v1,
-                        v2,
-                        &triangle_mat
-                    );
-
-                    triangles++;
-
-#endif
-                }
+                add_triangle(
+                    &scene,
+                    v0,
+                    v1,
+                    v2,
+                    material
+                );
             }
         }
     }
@@ -550,23 +402,36 @@ int main(void)
 
 
     printf(
-        "Spheres:   %d\n",
-        spheres
-    );
-
-    printf(
-        "Boxes:     %d\n",
-        boxes
-    );
-
-    printf(
         "Triangles: %d\n",
-        triangles
+        TOTAL_OBJECTS
     );
 
     printf(
-        "Total:     %d\n",
-        spheres + boxes + triangles
+        "Sphere material:   %d\n",
+        material_counts[0]
+    );
+
+    printf(
+        "Box material:      %d\n",
+        material_counts[1]
+    );
+
+    printf(
+        "Triangle material: %d\n",
+        material_counts[2]
+    );
+
+    printf(
+        "Ground material:   %d\n",
+        material_counts[3]
+    );
+
+    printf(
+        "Total:              %d\n",
+        material_counts[0]
+        + material_counts[1]
+        + material_counts[2]
+        + material_counts[3]
     );
 
     printf(

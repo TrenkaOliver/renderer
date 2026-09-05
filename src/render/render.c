@@ -8,6 +8,12 @@
 #include "render/trace.h"
 #include "scene/scene.h"
 
+uint64_t visited_nodes = 0;
+uint64_t primitive_tests = 0;
+uint64_t first_object_called = 0;
+uint64_t s_visited_nodes = 0;
+uint64_t s_first_object_called = 0;
+
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     unsigned char *pa, *pp;
     int i, j, aa_i, aa_j;
@@ -82,6 +88,9 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     clock_t render_end = clock();
 
     printf("Rendering: %.3f s\n", (double)(render_end - render_start) / CLOCKS_PER_SEC);
+    printf("nodes visited primary: %zu\n", visited_nodes / first_object_called);
+    printf("primitive test per call: %zu\n", primitive_tests / first_object_called);
+    printf("nodes visited shadow: %zu\n", s_visited_nodes / s_first_object_called);
 
     return 0;
 }

@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -flto -ffast-math
+CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -flto -ffast-math -mavx2
 
 LDLIBS = -lm
 

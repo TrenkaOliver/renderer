@@ -8,7 +8,7 @@
 #define C_TRAVELSAL 1
 #define C_INTERSECT 1
 #define BIN_COUNT 32
-#define LEAF_SIZE 8
+#define LEAF_SIZE 4
 
 typedef struct Bin {
     AABB aabb;
@@ -17,6 +17,7 @@ typedef struct Bin {
 
 static Object **ptr_array;
 static BVHNode *nodes;
+uint32_t node_count;
 
 float get_surface_area(uint32_t start, uint32_t end);
 float SA(AABB aabb);
@@ -84,6 +85,7 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
         .primitive_count = count
     };
 
+    node_count++;
     return idx + 1;
 }
 
@@ -208,13 +210,17 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
 
 uint32_t bvh8node_count = 0;
 uint32_t bvh8node_capacity = 32;
+uint32_t bvh8nodes_offset = 0;
 BVH8Node *bvh8nodes;
 
 
 BVH8Tree create_bvh8_tree(Object *first, size_t count) {
     BVH bvh = create_bvh(first, count);
 
-    bvh8nodes = malloc(bvh8node_capacity * sizeof(BVH8Node));
+    bvh8nodes = malloc(bvh8node_capacity * sizeof(BVH8Node) + 32);
+    bvh8nodes_offset = (32 -(size_t)bvh8nodes % 32);
+    bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
+
     collapse_bvh_node(&bvh, 0);
 
     BVH8Tree bvh8tree = {
@@ -223,6 +229,8 @@ BVH8Tree create_bvh8_tree(Object *first, size_t count) {
     };
 
     free(nodes);
+
+    printf("%zu bvh nodes and %zu bvh8 nodes\n", node_count, bvh8node_count);
 
     return bvh8tree;
 }
@@ -310,7 +318,9 @@ uint32_t collapse_bvh_node(BVH *bvh, uint32_t idx) {
 
     if (bvh8node_count == bvh8node_capacity) {
         bvh8node_capacity *= 2;
-        bvh8nodes = realloc(bvh8nodes, bvh8node_capacity * sizeof(BVH8Node));
+        bvh8nodes = realloc((char *)bvh8nodes - bvh8nodes_offset, bvh8node_capacity * sizeof(BVH8Node) + 32);
+        bvh8nodes_offset = (32 -(size_t)bvh8nodes % 32);
+        bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
     }
 
     uint32_t node_index = bvh8node_count++;    
@@ -324,13 +334,43 @@ uint32_t collapse_bvh_node(BVH *bvh, uint32_t idx) {
 
     for (int i = 0; i < left; i++) {
         indices[i] = child_indices[i];
-    }
-    
-    for (int i = 0; i < count; i++) {
+    }    
+
+    float min_x[8];
+    float min_y[8];
+    float min_z[8];
+    float max_x[8];
+    float max_y[8];
+    float max_z[8];
+
+    int i;
+
+    for (i = 0; i < count; i++) {
         node_ptr->idx[i] = indices[i];
-        node_ptr->bounds[i] = bounds[i];
         node_ptr->primitive_count[i] = primitive_count[i];
+        min_x[i] = bounds[i].min[0];
+        min_y[i] = bounds[i].min[1];
+        min_z[i] = bounds[i].min[2];
+        max_x[i] = bounds[i].max[0];
+        max_y[i] = bounds[i].max[1];
+        max_z[i] = bounds[i].max[2];
     }
+
+    for (; i < 8; i++) {
+        min_x[i] = FLT_MAX;
+        min_y[i] = FLT_MAX;
+        min_z[i] = FLT_MAX;
+        max_x[i] = -FLT_MAX;
+        max_y[i] = -FLT_MAX;
+        max_z[i] = -FLT_MAX;
+    }
+
+    node_ptr->bounds.min.x = _mm256_loadu_ps(min_x);
+    node_ptr->bounds.min.y = _mm256_loadu_ps(min_y);
+    node_ptr->bounds.min.z = _mm256_loadu_ps(min_z);
+    node_ptr->bounds.max.x = _mm256_loadu_ps(max_x);
+    node_ptr->bounds.max.y = _mm256_loadu_ps(max_y);
+    node_ptr->bounds.max.z = _mm256_loadu_ps(max_z);    
     
     node_ptr->internal_count = left;
     node_ptr->leaf_count = count - left;

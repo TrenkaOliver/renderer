@@ -10,6 +10,22 @@ typedef struct ps_Vec {
     __m256 z;
 } ps_Vec;
 
+static inline ps_Vec ps_from_vec(Vec v) {
+    return (ps_Vec) {
+        .x = _mm256_set1_ps(v.x),
+        .y = _mm256_set1_ps(v.y),
+        .z = _mm256_set1_ps(v.z)
+    };
+}
+
+static inline ps_Vec ps_zero_vec() {
+    return (ps_Vec) {
+        .x = _mm256_setzero_ps(),
+        .y = _mm256_setzero_ps(),
+        .z = _mm256_setzero_ps()
+    };
+}
+
 static inline __m256 ps_len_sqr(ps_Vec vec) {
     return _mm256_fmadd_ps(vec.x, vec.x, _mm256_fmadd_ps(vec.y, vec.y, _mm256_mul_ps(vec.z, vec.z)));
 }

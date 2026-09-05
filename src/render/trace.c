@@ -39,6 +39,7 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     int x, y, w, h, idx;
     unsigned char *ptr;
 
+
     hit = get_first_hit(ray, scene, bvh);
 
     if (hit.t < 0.0) {

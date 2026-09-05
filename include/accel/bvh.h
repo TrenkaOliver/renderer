@@ -18,7 +18,7 @@ typedef struct BVH {
 } BVH;
 
 typedef struct BVH8Node {
-    AABB bounds[8];
+    PackedAABB bounds;
     uint32_t idx[8];
     uint8_t primitive_count[8];
     uint8_t internal_count;
