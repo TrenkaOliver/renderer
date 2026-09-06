@@ -88,9 +88,6 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     clock_t render_end = clock();
 
     printf("Rendering: %.3f s\n", (double)(render_end - render_start) / CLOCKS_PER_SEC);
-    printf("nodes visited primary: %zu\n", visited_nodes / first_object_called);
-    printf("primitive test per call: %zu\n", primitive_tests / first_object_called);
-    printf("nodes visited shadow: %zu\n", s_visited_nodes / s_first_object_called);
 
     return 0;
 }

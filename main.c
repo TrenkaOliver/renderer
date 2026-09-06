@@ -184,7 +184,7 @@ int main(void)
         .width = width,
         .height = height,
 
-        .max_depth = 2,
+        .max_depth = 0,
 
         .aa_samples = 1
     };

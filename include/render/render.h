@@ -7,12 +7,6 @@
 #include "scene/scene.h"
 #include "camera/camera.h"
 
-extern uint64_t visited_nodes;
-extern uint64_t primitive_tests;
-extern uint64_t first_object_called;
-extern uint64_t s_visited_nodes;
-extern uint64_t s_first_object_called;
-
 typedef struct Color {
     double r;
     double g;

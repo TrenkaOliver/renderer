@@ -28,9 +28,8 @@ typedef struct BVH8Node {
 typedef struct BVH8Tree {
     BVH8Node *nodes;
     Object **objects;
+    SoATriangle triangles;
 } BVH8Tree;
-
-
 
 BVH create_bvh(Object *first, size_t count);
 BVH8Tree create_bvh8_tree(Object *first, size_t count);

@@ -2,6 +2,7 @@
 #define PACKED_VECTOR_H
 
 #include <math.h>
+#include <math/vec.h>
 #include <immintrin.h>
 
 typedef struct ps_Vec {
