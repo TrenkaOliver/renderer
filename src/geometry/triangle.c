@@ -8,23 +8,23 @@
 
 __m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, SoATriangle *array) {
     ps_Vec a = (ps_Vec){
-        .x = _mm256_loadu_ps(array->ax + idx),
-        .y = _mm256_loadu_ps(array->ay + idx),
-        .z = _mm256_loadu_ps(array->az + idx)
+        .x = _mm256_loadu_ps(array->arr + idx),
+        .y = _mm256_loadu_ps(array->arr + array->offset + idx),
+        .z = _mm256_loadu_ps(array->arr + array->offset * 2 + idx)
     };
     ps_Vec ao = ps_v_sub(ray->o, a);
 
     ps_Vec b = (ps_Vec){
-        .x = _mm256_loadu_ps(array->bx + idx),
-        .y = _mm256_loadu_ps(array->by + idx),
-        .z = _mm256_loadu_ps(array->bz + idx)
+        .x = _mm256_loadu_ps(array->arr + array->offset * 3 + idx),
+        .y = _mm256_loadu_ps(array->arr + array->offset * 4 + idx),
+        .z = _mm256_loadu_ps(array->arr + array->offset * 5 + idx)
     };    
     ps_Vec ab = ps_v_sub(b, a);
 
     ps_Vec c = (ps_Vec){
-        .x = _mm256_loadu_ps(array->cx + idx),
-        .y = _mm256_loadu_ps(array->cy + idx),
-        .z = _mm256_loadu_ps(array->cz + idx)
+        .x = _mm256_loadu_ps(array->arr + array->offset * 6 + idx),
+        .y = _mm256_loadu_ps(array->arr + array->offset * 7 + idx),
+        .z = _mm256_loadu_ps(array->arr + array->offset * 8 + idx)
     };
     ps_Vec ac = ps_v_sub(c, a);
 
@@ -119,9 +119,9 @@ HitResult triangle_result(float t, uint32_t idx, Ray *ray, SoATriangle *triangle
     Vec p = v_add(ray->o, scale(ray->v, t));
 
     Vec ng = {
-        .x = triangles->ngx[idx],
-        .y = triangles->ngy[idx],
-        .z = triangles->ngz[idx]
+        .x = triangles->arr[triangles->offset * 18 + idx],
+        .y = triangles->arr[triangles->offset * 19 + idx],
+        .z = triangles->arr[triangles->offset * 20 + idx]
     };
 
     Material *m = triangles->mat_ptr_arr[idx];

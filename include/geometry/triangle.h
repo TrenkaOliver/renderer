@@ -20,40 +20,43 @@ typedef struct Triangle {
 } Triangle;
 
 typedef struct SoATriangle {
-    float *ax;
-    float *ay;
-    float *az;
+    // float *ax;
+    // float *ay;
+    // float *az;
 
-    float *bx;
-    float *by;
-    float *bz;
+    // float *bx;
+    // float *by;
+    // float *bz;
 
-    float *cx;
-    float *cy;
-    float *cz;
+    // float *cx;
+    // float *cy;
+    // float *cz;
 
-    float *nax;
-    float *nay;
-    float *naz;
+    // float *nax;
+    // float *nay;
+    // float *naz;
 
-    float *nbx;
-    float *nby;
-    float *nbz;
+    // float *nbx;
+    // float *nby;
+    // float *nbz;
 
-    float *ncx;
-    float *ncy;
-    float *ncz;
+    // float *ncx;
+    // float *ncy;
+    // float *ncz;
 
-    float *ngx;
-    float *ngy;
-    float *ngz;
+    // float *ngx;
+    // float *ngy;
+    // float *ngz;
 
-    float *tax;
-    float *tay;
+    // float *tax;
+    // float *tay;
 
-    float *tbx;
-    float *tby;
-    
+    // float *tbx;
+    // float *tby;
+
+    float *arr;
+    uint32_t offset;
+
     uint32_t *obj_idx;
     Material **mat_ptr_arr;
 } SoATriangle;
