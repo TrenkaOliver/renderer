@@ -26,9 +26,9 @@
  * 100 x 100 x 50 = 500,000 triangles
  */
 
-#define GRID_X 100
-#define GRID_Y 100
-#define GRID_Z 50
+#define GRID_X 16
+#define GRID_Y 16
+#define GRID_Z 16
 
 #define CELL_X 100.0
 #define CELL_Y 100.0

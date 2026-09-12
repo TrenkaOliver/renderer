@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <float.h>
+#include <string.h>
 
 #include "accel/bvh.h"
 #include "accel/cmp.h"
@@ -472,12 +473,25 @@ uint32_t collapse_bvh_node(BVH *bvh, uint32_t idx) {
             right--;
         }
     }
-
+    
     if (bvh8node_count == bvh8node_capacity) {
         bvh8node_capacity *= 2;
-        bvh8nodes = realloc((char *)bvh8nodes - bvh8nodes_offset, bvh8node_capacity * sizeof(BVH8Node) + 32);
-        bvh8nodes_offset = (32 -(size_t)bvh8nodes % 32);
-        bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
+        
+        char *new_ptr = malloc(bvh8node_capacity * sizeof(BVH8Node) + 32);
+        uint32_t new_offset = 32 - (size_t)new_ptr % 32;
+        new_ptr += new_offset;
+        
+        memcpy(new_ptr, bvh8nodes, bvh8node_count * sizeof(BVH8Node));
+
+        free((char *)bvh8nodes - bvh8nodes_offset);
+        
+        bvh8nodes = (BVH8Node *)new_ptr;
+        bvh8nodes_offset = new_offset;
+
+        // bvh8nodes = realloc((char *)bvh8nodes - bvh8nodes_offset, bvh8node_capacity * sizeof(BVH8Node) + 32);
+        // printf("offset: %u, new_offset: %u\n", bvh8nodes_offset, (32 -(size_t)bvh8nodes % 32));
+        // bvh8nodes_offset = (32 -(size_t)bvh8nodes % 32);
+        // bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
     }
 
     uint32_t node_index = bvh8node_count++;    
