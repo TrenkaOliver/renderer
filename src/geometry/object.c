@@ -4,15 +4,17 @@
 #include "render/render.h"
 
 static inline void move_near_fw(uint32_t idx[], float t[], int count) {
-    for (int i = 1; i < count; i++) {
-        if (t[i] > t[i - 1]) {
-            float t_tmp = t[i - 1];
-            t[i - 1] = t[i];
-            t[i] = t_tmp;
+    for (int iter = 0; iter < 2; iter++) {
+        for (int i = 1; i < count; i++) {
+            if (t[i] > t[i - 1]) {
+                float t_tmp = t[i - 1];
+                t[i - 1] = t[i];
+                t[i] = t_tmp;
 
-            uint32_t idx_tmp = idx[i - 1];
-            idx[i - 1] = idx[i];
-            idx[i] = idx_tmp;
+                uint32_t idx_tmp = idx[i - 1];
+                idx[i - 1] = idx[i];
+                idx[i] = idx_tmp;
+            }
         }
     }
 }
