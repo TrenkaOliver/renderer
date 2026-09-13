@@ -2,6 +2,8 @@
 #define TRIANGLE_H
 
 #include "math/vec.h"
+#include "geometry/aabb.h"
+#include "light/material.h"
 #include "stdint.h"
 
 typedef struct Triangle {
@@ -19,46 +21,40 @@ typedef struct Triangle {
     Vec tc;
 } Triangle;
 
-typedef struct SoATriangle {
-    // float *ax;
-    // float *ay;
-    // float *az;
+typedef struct Vertex {
+    float *x;
+    float *y;
+    float *z;
 
-    // float *bx;
-    // float *by;
-    // float *bz;
+    float *nx;
+    float *ny;
+    float *nz;
 
-    // float *cx;
-    // float *cy;
-    // float *cz;
+    float *u;
+    float *v;
+} Vertex;
 
-    // float *nax;
-    // float *nay;
-    // float *naz;
+typedef struct BuildingTriangle {
+    uint32_t *ai;
+    uint32_t *bi;
+    uint32_t *ci;
 
-    // float *nbx;
-    // float *nby;
-    // float *nbz;
+    float *nx;
+    float *ny;
+    float *nz;
 
-    // float *ncx;
-    // float *ncy;
-    // float *ncz;
+    AABB *aabb;
+    float *centroid;
+    Material **material;
+    
+} BuildingTriangle;
 
-    // float *ngx;
-    // float *ngy;
-    // float *ngz;
-
-    // float *tax;
-    // float *tay;
-
-    // float *tbx;
-    // float *tby;
-
+typedef struct RuntimeTriangle {
     float *arr;
     uint32_t offset;
 
-    uint32_t *obj_idx;
+    uint32_t *building_idx;
     Material **mat_ptr_arr;
-} SoATriangle;
+} RuntimeTriangle;
 
 #endif

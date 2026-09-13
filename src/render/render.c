@@ -42,7 +42,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
-    bvh = create_bvh8_tree(scene->objects.ptr, scene->objects.count);
+    bvh = create_bvh8_tree(&scene->triangles, &scene->vertices, scene->triangle_count);
 
     clock_t bvh_end = clock();
 

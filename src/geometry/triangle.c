@@ -6,7 +6,7 @@
 
 #define EPSILON 1e-8
 
-__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, SoATriangle *array) {
+__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array) {
     ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset + idx),
@@ -115,7 +115,7 @@ HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
     return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
 }
 
-HitResult triangle_result(float t, uint32_t idx, Ray *ray, SoATriangle *triangles) {
+HitResult triangle_result(float t, uint32_t idx, Ray *ray, RuntimeTriangle *triangles) {
     Vec p = v_add(ray->o, scale(ray->v, t));
 
     Vec ng = {

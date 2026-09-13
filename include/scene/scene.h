@@ -14,10 +14,16 @@ typedef struct Scene {
     DirectionalLight dir_light;
     Vec global_ambient;
     DynArray planes;
-    DynArray objects;
+    Vertex vertices;
+    BuildingTriangle triangles;
+    uint32_t vertex_count;
+    uint32_t vertex_capacity;
+    uint32_t triangle_count;
+    uint32_t triangle_capacity;
     DynArray meshes;
     DynArray materials;
     DynArray textures;
+    //DynArray objects;
 } Scene;
 
 Scene create_scene();
@@ -28,14 +34,14 @@ size_t import_mesh(Scene *scene, char *file_name);
 size_t get_material_id(char *s, DynArray *arr);
 size_t add_material(char *s, DynArray *arr, Scene *scene);
 
-size_t add_sphere(Scene *scene, Vec center, double radious, Material *material);
+//size_t add_sphere(Scene *scene, Vec center, double radious, Material *material);
 
 size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
-size_t add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
-size_t add_triangle_t(Scene *scene, Vec a, Vec b, Vec c, Vec ta, Vec tb, Vec tc, Material *material);
-size_t add_triangle_complete(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Vec ta, Vec tb, Vec tc, Material *material);
+//size_t add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
+//size_t add_triangle_t(Scene *scene, Vec a, Vec b, Vec c, Vec ta, Vec tb, Vec tc, Material *material);
+//size_t add_triangle_complete(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Vec ta, Vec tb, Vec tc, Material *material);
 
-size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
+//size_t add_box(Scene *scene, Vec position, Vec rotation, Vec size, Material *material);
 
 void move_mesh(Scene *scene, Mesh *mesh, Vec delta);   
 void scale_mesh(Scene *scene, Mesh *mesh, Vec scale);

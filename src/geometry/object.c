@@ -56,7 +56,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
 
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->triangles);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles);
 
             _mm256_storeu_ps(t_values, ps_t_triangle);
 
@@ -68,8 +68,6 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
                 }
             }
         }
-
-        valid_mask = _mm256_movemask_ps(valid);
 
         _mm256_storeu_ps(t_values, ps_t_aabb);
         
@@ -91,7 +89,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
     if (best_idx == -1) 
         return (HitResult){.t = -1.0};
     else
-        return triangle_result(t_min, best_idx, ray, &bvh->triangles);
+        return triangle_result(t_min, best_idx, ray, &bvh->runtime_triangles);
 }
 
 int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
@@ -124,7 +122,7 @@ int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
 
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->triangles);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles);
             _mm256_storeu_ps(t_values, ps_t_triangle);
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {

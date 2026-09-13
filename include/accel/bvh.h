@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 #include "geometry/aabb.h"
-#include "geometry/object.h"
+//#include "geometry/object.h"
+#include "geometry/triangle.h"
 
 typedef struct BVHNode {
     AABB aabb;
@@ -14,7 +15,7 @@ typedef struct BVHNode {
 
 typedef struct BVH {
     BVHNode *nodes;
-    Object **objects;
+    BuildingTriangle triangles;
 } BVH;
 
 typedef struct BVH8Node {
@@ -27,11 +28,11 @@ typedef struct BVH8Node {
 
 typedef struct BVH8Tree {
     BVH8Node *nodes;
-    Object **objects;
-    SoATriangle triangles;
+    BuildingTriangle building_triangles;
+    RuntimeTriangle runtime_triangles;
 } BVH8Tree;
 
-BVH create_bvh(Object *first, size_t count);
-BVH8Tree create_bvh8_tree(Object *first, size_t count);
+BVH create_bvh(BuildingTriangle *triangles, size_t count);
+BVH8Tree create_bvh8_tree(BuildingTriangle *triangles, Vertex *vertices, size_t count);
 
 #endif
