@@ -158,12 +158,77 @@ Material ground_mat = {
 };
 
 
-int main(void)
-{
+#define WIDTH 640
+#define HEIGHT 360
+
+#define AA 1
+#define MAX_DEPTH 2
+
+int create_test_scene(void);
+int create_import_scene(void);
+
+int main(void) {
+    return create_import_scene();
+}
+
+int create_import_scene(void) {
     clock_t start = clock();
 
-    const int width = 640;
-    const int height = 360;
+    const int width = WIDTH;
+    const int height = HEIGHT;
+
+    FILE *f = fopen("result.ppm", "wb");
+
+    if (!f) return 1;
+
+    Scene scene = create_scene();
+
+    RenderSettings settings = {
+        .width = width,
+        .height = height,
+
+        .max_depth = MAX_DEPTH,
+
+        .aa_samples = AA
+    };
+
+    Camera cam = create_look_at_camera(
+        vec(0.0, -200.0, 200.0),
+        vec(0.0, 0.0, 0.0),
+        1.0472
+    );
+
+    scene.dir_light.dir = normalize(vec(-0.4, -0.7, 1.0));
+
+    size_t mesh_id = import_mesh(&scene, "./models/body.obj");
+    Mesh *mesh = get_element(mesh_id, &scene.meshes);
+
+    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
+    apply_mesh_transform(mesh);
+    set_mesh_position(&scene, mesh, vec(
+        mesh->size.x * -0.5,
+        mesh->size.y * -0.5,
+        mesh->size.z * -0.5
+    ));
+    scale_mesh(&scene, mesh, vec(100, 100, 100));
+
+    clock_t end = clock();
+
+    printf("Scene creation: %.3f s\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    render(f, &scene, &cam, &settings);
+
+    fclose(f);
+
+    return 0;
+        
+}
+
+int create_test_scene(void) {
+    clock_t start = clock();
+
+    const int width = WIDTH;
+    const int height = HEIGHT;
 
     FILE *f = fopen("result.ppm", "wb");
 
@@ -184,9 +249,9 @@ int main(void)
         .width = width,
         .height = height,
 
-        .max_depth = 2,
+        .max_depth = MAX_DEPTH,
 
-        .aa_samples = 1
+        .aa_samples = AA
     };
 
 

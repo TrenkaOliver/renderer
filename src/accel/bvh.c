@@ -39,6 +39,12 @@ BVH create_bvh(BuildingTriangle *first, size_t count) {
         .ai = malloc(count * sizeof(uint32_t)),
         .bi = malloc(count * sizeof(uint32_t)),
         .ci = malloc(count * sizeof(uint32_t)),
+        .nai = malloc(count * sizeof(uint32_t)),
+        .nbi = malloc(count * sizeof(uint32_t)),
+        .nci = malloc(count * sizeof(uint32_t)),
+        .tai = malloc(count * sizeof(uint32_t)),
+        .tbi = malloc(count * sizeof(uint32_t)),
+        .tci = malloc(count * sizeof(uint32_t)),
         .nx = malloc(count * sizeof(float)),
         .ny = malloc(count * sizeof(float)),
         .nz = malloc(count * sizeof(float)),
@@ -51,6 +57,12 @@ BVH create_bvh(BuildingTriangle *first, size_t count) {
         .ai = building_triangles.ai,
         .bi = building_triangles.bi,
         .ci = building_triangles.ci,
+        .nai = building_triangles.nai,
+        .nbi = building_triangles.nbi,
+        .nci = building_triangles.nci,
+        .tai = building_triangles.tai,
+        .tbi = building_triangles.tbi,
+        .tci = building_triangles.tci,
         .nx = building_triangles.nx,
         .ny = building_triangles.ny,
         .nz = building_triangles.nz,
@@ -246,6 +258,14 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             uint32_t tmp_bi = building_triangles.bi[left];
             uint32_t tmp_ci = building_triangles.ci[left];
 
+            uint32_t tmp_nai = building_triangles.nai[left];
+            uint32_t tmp_nbi = building_triangles.nbi[left];
+            uint32_t tmp_nci = building_triangles.nci[left];
+
+            uint32_t tmp_tai = building_triangles.tai[left];
+            uint32_t tmp_tbi = building_triangles.tbi[left];
+            uint32_t tmp_tci = building_triangles.tci[left];
+
             float tmp_nx = building_triangles.nx[left];
             float tmp_ny = building_triangles.ny[left];
             float tmp_nz = building_triangles.nz[left];
@@ -262,6 +282,14 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             building_triangles.bi[left] = building_triangles.bi[right];
             building_triangles.ci[left] = building_triangles.ci[right];
 
+            building_triangles.nai[left] = building_triangles.nai[right];
+            building_triangles.nbi[left] = building_triangles.nbi[right];
+            building_triangles.nci[left] = building_triangles.nci[right];
+
+            building_triangles.tai[left] = building_triangles.tai[right];
+            building_triangles.tbi[left] = building_triangles.tbi[right];
+            building_triangles.tci[left] = building_triangles.tci[right];
+
             building_triangles.nx[left] = building_triangles.nx[right];
             building_triangles.ny[left] = building_triangles.ny[right];
             building_triangles.nz[left] = building_triangles.nz[right];
@@ -277,6 +305,14 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             building_triangles.ai[right] = tmp_ai;
             building_triangles.bi[right] = tmp_bi;
             building_triangles.ci[right] = tmp_ci;
+
+            building_triangles.nai[right] = tmp_nai;
+            building_triangles.nbi[right] = tmp_nbi;
+            building_triangles.nci[right] = tmp_nci;
+
+            building_triangles.tai[right] = tmp_tai;
+            building_triangles.tbi[right] = tmp_tbi;
+            building_triangles.tci[right] = tmp_tci;
 
             building_triangles.nx[right] = tmp_nx;
             building_triangles.ny[right] = tmp_ny;
@@ -338,6 +374,12 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, Vertex *vertices, size_t coun
             .ai = bvh.triangles.ai,
             .bi = bvh.triangles.bi,
             .ci = bvh.triangles.ci,
+            .nai = bvh.triangles.nai,
+            .nbi = bvh.triangles.nbi,
+            .nci = bvh.triangles.nci,
+            .tai = bvh.triangles.tai,
+            .tbi = bvh.triangles.tbi,
+            .tci = bvh.triangles.tci,
             .nx = bvh.triangles.nx,
             .ny = bvh.triangles.ny,
             .nz = bvh.triangles.nz,
@@ -364,15 +406,15 @@ void setup_leaf(BVH *bvh, Vertex *vertices, uint32_t first_triangle, uint32_t co
         triangles_ptr->arr[next + triangles_offset * 6 + i] = vertices->x[building_triangles.ci[first_triangle + i]];
         triangles_ptr->arr[next + triangles_offset * 7 + i] = vertices->y[building_triangles.ci[first_triangle + i]];
         triangles_ptr->arr[next + triangles_offset * 8 + i] = vertices->z[building_triangles.ci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 9 + i] = vertices->nx[building_triangles.ai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 10 + i] = vertices->ny[building_triangles.ai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 11 + i] = vertices->nz[building_triangles.ai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 12 + i] = vertices->nx[building_triangles.bi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 13 + i] = vertices->ny[building_triangles.bi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 14 + i] = vertices->nz[building_triangles.bi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 15 + i] = vertices->nx[building_triangles.ci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 16 + i] = vertices->ny[building_triangles.ci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 17 + i] = vertices->nz[building_triangles.ci[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 9 + i] = vertices->nx[building_triangles.nai[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 10 + i] = vertices->ny[building_triangles.nai[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 11 + i] = vertices->nz[building_triangles.nai[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 12 + i] = vertices->nx[building_triangles.nbi[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 13 + i] = vertices->ny[building_triangles.nbi[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 14 + i] = vertices->nz[building_triangles.nbi[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 15 + i] = vertices->nx[building_triangles.nci[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 16 + i] = vertices->ny[building_triangles.nci[first_triangle + i]];
+        triangles_ptr->arr[next + triangles_offset * 17 + i] = vertices->nz[building_triangles.nci[first_triangle + i]];
         triangles_ptr->arr[next + triangles_offset * 18 + i] = building_triangles.nx[first_triangle + i];
         triangles_ptr->arr[next + triangles_offset * 19 + i] = building_triangles.ny[first_triangle + i];
         triangles_ptr->arr[next + triangles_offset * 20 + i] = building_triangles.nz[first_triangle + i];

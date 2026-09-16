@@ -5,9 +5,9 @@
 #include "light/material.h"
 
 typedef struct Face {
-    size_t v;
-    size_t vt;
-    size_t vn;
+    uint32_t v;
+    uint32_t vt;
+    uint32_t vn;
 } Face;
 
 typedef struct Mesh {
@@ -15,8 +15,14 @@ typedef struct Mesh {
     Vec rotation;
     Vec size;
     AABB aabb;
-    size_t first_triangle;
-    size_t triangle_count;
+    uint32_t first_triangle;
+    uint32_t triangle_count;
+    uint32_t first_vertex_pos;
+    uint32_t vertex_pos_count;
+    uint32_t first_vertex_normal;
+    uint32_t vertex_normal_count;
+    uint32_t first_vertex_texcoord;
+    uint32_t vertex_texcoord_count;
 } Mesh;
 
 #endif
