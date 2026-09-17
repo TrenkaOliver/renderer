@@ -83,7 +83,6 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
                 if (t_values[lane] >= 0.0f && t_values[lane] < t_min) {
-                    printf("hit\n");
                     t_min = t_values[lane];
                     ps_t_min = _mm256_set1_ps(t_min);
                     best_idx = bvh->nodes[idx].idx[i] + lane;

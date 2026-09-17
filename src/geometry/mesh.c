@@ -11,7 +11,10 @@ Material no_material = {
     .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
     .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
     .shininess = 1,
-    .reflectivity = 0
+    .reflectivity = 0,
+    .diffuse_map = (size_t)-1,
+    .splecular_map = (size_t)-1,
+    .normal_map = (size_t)-1,
 };
 
 void create_path(char *buff, char *file_name, char *child_name);
@@ -91,10 +94,10 @@ size_t import_mesh(Scene *scene, char *file_name) {
     while (fgets(line, 128, f)) {
         if (sscanf(line, "v %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
             i = grow_dyn_array(&v_arr);
-            *(Vec *)get_element(i, &v_arr) = _v;
+            *(Vec *)get_element(i, &v_arr) = vec(_v.x, -_v.z, _v.y);
         } else if (sscanf(line, "vn %lf %lf %lf", &_v.x, &_v.y, &_v.z) == 3) {
             i = grow_dyn_array(&vn_arr);
-            *(Vec *)get_element(i, &vn_arr) = _v;
+            *(Vec *)get_element(i, &vn_arr) = vec(_v.x, -_v.z, _v.y);
         } else if (sscanf(line, "vt %lf %lf", &_v.x, &_v.y) == 2) {
             i = grow_dyn_array(&vt_arr);
             *(Vec *)get_element(i, &vt_arr) = _v;

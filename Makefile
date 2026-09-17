@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -mavx2 -mfma -flto -ffast-math -fno-omit-frame-pointer
+CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -mavx2 -mfma -flto=16 -ffast-math -fno-omit-frame-pointer
 
 LDLIBS = -lm
 

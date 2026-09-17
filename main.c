@@ -199,7 +199,9 @@ int import_scene(void) {
 
     scene.dir_light.dir = normalize(vec(-0.4, -0.7, 1.0));
 
-    size_t mesh_id = import_mesh(&scene, "./models/tree.obj");
+    size_t mesh_id = import_mesh(&scene, "./models/body.obj");
+    //size_t mesh_id = import_mesh(&scene, "./models/tree.obj");
+    //size_t mesh_id = import_mesh(&scene, "./models/Castle/Castle OBJ.obj");
     Mesh *mesh = get_element(mesh_id, &scene.meshes);
 
     // set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
