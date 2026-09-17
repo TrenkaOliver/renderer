@@ -17,7 +17,7 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh) {
     HitResult plane_result, object_result;
 
     plane_result = get_first_plane(ray, &scene->planes);
-    object_result = get_first_object(ray, bvh);
+    object_result = get_first_object(ray, bvh, &scene->materials);
 
     if(plane_result.t < 0.0) return object_result;
     if(object_result.t < 0.0) return plane_result;

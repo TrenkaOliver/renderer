@@ -118,7 +118,7 @@ HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
     return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
 }
 
-HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, Vertex *vertices) {
+HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, Vertex *vertices, DynArray *materials) {
     Vec p = v_add(ray->o, scale(ray->v, t));
 
     uint32_t i = runtime_triangles->building_idx[idx];
@@ -128,8 +128,10 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
         .z = building_triangles->nz[i]
     };
 
+    Material *m = ((Material *)materials->ptr) + building_triangles->material[i];
+
     if (building_triangles->nai[i] == (uint32_t)-1) {
-        return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = building_triangles->material[i], .d_u = NAN, .d_v = NAN};
+        return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
     }
 
     float w = 1 - u - v;
@@ -153,8 +155,6 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
     };
 
     Vec ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
-
-    Material *m = building_triangles->material[idx];
 
     return (HitResult){.point = p, .ng = ng, .ns = ns, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
 }

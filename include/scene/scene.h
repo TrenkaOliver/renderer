@@ -40,11 +40,11 @@ size_t add_material(char *s, DynArray *arr, Scene *scene);
 
 //size_t add_sphere(Scene *scene, Vec center, double radious, Material *material);
 
-size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *material);
+size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, uint32_t material);
 uint32_t add_vertex_pos(float x, float y, float z, Scene *scene);
 uint32_t add_vertex_normal(float nx, float ny, float nz, Scene *scene);
 uint32_t add_vertex_texcoord(float u, float v, Scene *scene);
-uint32_t add_triangle_from_indices(uint32_t ai, uint32_t bi, uint32_t ci, uint32_t nai, uint32_t nbi, uint32_t nci, uint32_t tai, uint32_t tbi, uint32_t tci, Material *material, Scene *scene);
+uint32_t add_triangle_from_indices(uint32_t ai, uint32_t bi, uint32_t ci, uint32_t nai, uint32_t nbi, uint32_t nci, uint32_t tai, uint32_t tbi, uint32_t tci, uint32_t material, Scene *scene);
 //size_t add_triangle_ns(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Material *material);
 //size_t add_triangle_t(Scene *scene, Vec a, Vec b, Vec c, Vec ta, Vec tb, Vec tc, Material *material);
 //size_t add_triangle_complete(Scene *scene, Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc, Vec ta, Vec tb, Vec tc, Material *material);

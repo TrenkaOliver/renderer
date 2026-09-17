@@ -164,7 +164,7 @@ Material ground_mat = {
 #define AA 1
 #define MAX_DEPTH 2
 
-int create_test_scene(void);
+//int create_test_scene(void);
 int create_import_scene(void);
 
 int main(void) {
@@ -224,303 +224,303 @@ int create_import_scene(void) {
         
 }
 
-int create_test_scene(void) {
-    clock_t start = clock();
+// int create_test_scene(void) {
+//     clock_t start = clock();
 
-    const int width = WIDTH;
-    const int height = HEIGHT;
+//     const int width = WIDTH;
+//     const int height = HEIGHT;
 
-    FILE *f = fopen("result.ppm", "wb");
+//     FILE *f = fopen("result.ppm", "wb");
 
-    if (!f)
-        return 1;
+//     if (!f)
+//         return 1;
 
 
-    /*
-     * ============================================================
-     * Scene
-     * ============================================================
-     */
+//     /*
+//      * ============================================================
+//      * Scene
+//      * ============================================================
+//      */
 
-    Scene scene = create_scene();
+//     Scene scene = create_scene();
 
 
-    RenderSettings settings = {
-        .width = width,
-        .height = height,
+//     RenderSettings settings = {
+//         .width = width,
+//         .height = height,
 
-        .max_depth = MAX_DEPTH,
+//         .max_depth = MAX_DEPTH,
 
-        .aa_samples = AA
-    };
+//         .aa_samples = AA
+//     };
 
 
-    /*
-     * ============================================================
-     * Camera
-     * ============================================================
-     */
+//     /*
+//      * ============================================================
+//      * Camera
+//      * ============================================================
+//      */
 
-    Camera cam = create_look_at_camera(
-        vec(0.0, -1000.0, 500.0),
-        vec(0.0, 0.0, 500.0),
-        1.0472
-    );
+//     Camera cam = create_look_at_camera(
+//         vec(0.0, -1000.0, 500.0),
+//         vec(0.0, 0.0, 500.0),
+//         1.0472
+//     );
 
 
-    /*
-     * ============================================================
-     * Directional light
-     * ============================================================
-     */
+//     /*
+//      * ============================================================
+//      * Directional light
+//      * ============================================================
+//      */
 
-    scene.dir_light.dir =
-        normalize(vec(
-            -0.4,
-            -0.7,
-            1.0
-        ));
+//     scene.dir_light.dir =
+//         normalize(vec(
+//             -0.4,
+//             -0.7,
+//             1.0
+//         ));
 
 
-    /*
-     * ============================================================
-     * Triangle generation
-     * ============================================================
-     *
-     * Exactly 500,000 triangles:
-     *
-     *     100 x 100 x 50
-     *
-     * The spatial distribution is the same as the triangle
-     * portion of the previous test scene.
-     *
-     * Materials are distributed deterministically:
-     *
-     *     index % 4 == 0 -> sphere material
-     *     index % 4 == 1 -> box material
-     *     index % 4 == 2 -> triangle material
-     *     index % 4 == 3 -> ground material
-     *
-     * This gives approximately 125,000 triangles of each
-     * material.
-     */
+//     /*
+//      * ============================================================
+//      * Triangle generation
+//      * ============================================================
+//      *
+//      * Exactly 500,000 triangles:
+//      *
+//      *     100 x 100 x 50
+//      *
+//      * The spatial distribution is the same as the triangle
+//      * portion of the previous test scene.
+//      *
+//      * Materials are distributed deterministically:
+//      *
+//      *     index % 4 == 0 -> sphere material
+//      *     index % 4 == 1 -> box material
+//      *     index % 4 == 2 -> triangle material
+//      *     index % 4 == 3 -> ground material
+//      *
+//      * This gives approximately 125,000 triangles of each
+//      * material.
+//      */
 
-    int material_counts[4] = {0, 0, 0, 0};
+//     int material_counts[4] = {0, 0, 0, 0};
 
 
-    for (int x = 0; x < GRID_X; x++) {
+//     for (int x = 0; x < GRID_X; x++) {
 
-        for (int y = 0; y < GRID_Y; y++) {
+//         for (int y = 0; y < GRID_Y; y++) {
 
-            for (int z = 0; z < GRID_Z; z++) {
+//             for (int z = 0; z < GRID_Z; z++) {
 
-                int index =
-                    x * GRID_Y * GRID_Z +
-                    y * GRID_Z +
-                    z;
+//                 int index =
+//                     x * GRID_Y * GRID_Z +
+//                     y * GRID_Z +
+//                     z;
 
 
-                /*
-                 * ------------------------------------------------
-                 * Cell center
-                 * ------------------------------------------------
-                 */
-
-                double px =
-                    (x - GRID_X / 2) * CELL_X;
-
-                double py =
-                    y * CELL_Y;
+//                 /*
+//                  * ------------------------------------------------
+//                  * Cell center
+//                  * ------------------------------------------------
+//                  */
+
+//                 double px =
+//                     (x - GRID_X / 2) * CELL_X;
+
+//                 double py =
+//                     y * CELL_Y;
 
-                double pz =
-                    40.0 + z * CELL_Z;
-
-
-                /*
-                 * ------------------------------------------------
-                 * Positional jitter
-                 * ------------------------------------------------
-                 */
-
-                px += random_double(-20.0, 20.0);
-                py += random_double(-20.0, 20.0);
-                pz += random_double(-20.0, 20.0);
-
-
-                /*
-                 * ------------------------------------------------
-                 * Triangle dimensions
-                 * ------------------------------------------------
-                 */
-
-                double w =
-                    random_double(
-                        20.0,
-                        60.0
-                    );
-
-                double h =
-                    random_double(
-                        20.0,
-                        60.0
-                    );
-
-
-                /*
-                 * ------------------------------------------------
-                 * Triangle geometry
-                 * ------------------------------------------------
-                 */
-
-                Vec v0 = vec(
-                    px - w * 0.5,
-                    py - h * 0.5,
-                    pz
-                );
-
-
-                Vec v1 = vec(
-                    px + w * 0.5,
-                    py,
-                    pz + random_double(
-                        -20.0,
-                         20.0
-                    )
-                );
-
-
-                Vec v2 = vec(
-                    px,
-                    py + h * 0.5,
-                    pz + random_double(
-                        -20.0,
-                         20.0
-                    )
-                );
-
-
-                /*
-                 * ------------------------------------------------
-                 * Material distribution
-                 * ------------------------------------------------
-                 */
-
-                Material *material;
-
-                switch (index % 3) {
-
-                    case 0:
-                        material = &sphere_mat;
-                        material_counts[0]++;
-                        break;
-
-                    case 1:
-                        material = &box_mat;
-                        material_counts[1]++;
-                        break;
-
-                    case 2:
-                        material = &triangle_mat;
-                        material_counts[2]++;
-                        break;
-
-                    default:
-                        material = &ground_mat;
-                        material_counts[3]++;
-                        break;
-                }
-
-
-                add_triangle(
-                    &scene,
-                    v0,
-                    v1,
-                    v2,
-                    material
-                );
-            }
-        }
-    }
-
-
-    /*
-     * ============================================================
-     * Ground plane
-     * ============================================================
-     */
-
-    add_plane(
-        &scene,
-        vec(0.0, 0.0, 0.0),
-        vec(0.0, 0.0, 1.0),
-        &ground_mat
-    );
-
-
-    /*
-     * ============================================================
-     * Scene creation timing
-     * ============================================================
-     */
-
-    clock_t end = clock();
-
-
-    printf(
-        "Triangles: %d\n",
-        TOTAL_OBJECTS
-    );
-
-    printf(
-        "Sphere material:   %d\n",
-        material_counts[0]
-    );
-
-    printf(
-        "Box material:      %d\n",
-        material_counts[1]
-    );
-
-    printf(
-        "Triangle material: %d\n",
-        material_counts[2]
-    );
-
-    printf(
-        "Ground material:   %d\n",
-        material_counts[3]
-    );
-
-    printf(
-        "Total:              %d\n",
-        material_counts[0]
-        + material_counts[1]
-        + material_counts[2]
-        + material_counts[3]
-    );
-
-    printf(
-        "Scene creation: %.3f s\n",
-        (double)(end - start) /
-        CLOCKS_PER_SEC
-    );
-
-
-    /*
-     * ============================================================
-     * Render
-     * ============================================================
-     */
-
-    render(
-        f,
-        &scene,
-        &cam,
-        &settings
-    );
-
-
-    fclose(f);
-
-    return 0;
-}
+//                 double pz =
+//                     40.0 + z * CELL_Z;
+
+
+//                 /*
+//                  * ------------------------------------------------
+//                  * Positional jitter
+//                  * ------------------------------------------------
+//                  */
+
+//                 px += random_double(-20.0, 20.0);
+//                 py += random_double(-20.0, 20.0);
+//                 pz += random_double(-20.0, 20.0);
+
+
+//                 /*
+//                  * ------------------------------------------------
+//                  * Triangle dimensions
+//                  * ------------------------------------------------
+//                  */
+
+//                 double w =
+//                     random_double(
+//                         20.0,
+//                         60.0
+//                     );
+
+//                 double h =
+//                     random_double(
+//                         20.0,
+//                         60.0
+//                     );
+
+
+//                 /*
+//                  * ------------------------------------------------
+//                  * Triangle geometry
+//                  * ------------------------------------------------
+//                  */
+
+//                 Vec v0 = vec(
+//                     px - w * 0.5,
+//                     py - h * 0.5,
+//                     pz
+//                 );
+
+
+//                 Vec v1 = vec(
+//                     px + w * 0.5,
+//                     py,
+//                     pz + random_double(
+//                         -20.0,
+//                          20.0
+//                     )
+//                 );
+
+
+//                 Vec v2 = vec(
+//                     px,
+//                     py + h * 0.5,
+//                     pz + random_double(
+//                         -20.0,
+//                          20.0
+//                     )
+//                 );
+
+
+//                 /*
+//                  * ------------------------------------------------
+//                  * Material distribution
+//                  * ------------------------------------------------
+//                  */
+
+//                 Material *material;
+
+//                 switch (index % 3) {
+
+//                     case 0:
+//                         material = &sphere_mat;
+//                         material_counts[0]++;
+//                         break;
+
+//                     case 1:
+//                         material = &box_mat;
+//                         material_counts[1]++;
+//                         break;
+
+//                     case 2:
+//                         material = &triangle_mat;
+//                         material_counts[2]++;
+//                         break;
+
+//                     default:
+//                         material = &ground_mat;
+//                         material_counts[3]++;
+//                         break;
+//                 }
+
+
+//                 add_triangle(
+//                     &scene,
+//                     v0,
+//                     v1,
+//                     v2,
+//                     material
+//                 );
+//             }
+//         }
+//     }
+
+
+//     /*
+//      * ============================================================
+//      * Ground plane
+//      * ============================================================
+//      */
+
+//     add_plane(
+//         &scene,
+//         vec(0.0, 0.0, 0.0),
+//         vec(0.0, 0.0, 1.0),
+//         &ground_mat
+//     );
+
+
+//     /*
+//      * ============================================================
+//      * Scene creation timing
+//      * ============================================================
+//      */
+
+//     clock_t end = clock();
+
+
+//     printf(
+//         "Triangles: %d\n",
+//         TOTAL_OBJECTS
+//     );
+
+//     printf(
+//         "Sphere material:   %d\n",
+//         material_counts[0]
+//     );
+
+//     printf(
+//         "Box material:      %d\n",
+//         material_counts[1]
+//     );
+
+//     printf(
+//         "Triangle material: %d\n",
+//         material_counts[2]
+//     );
+
+//     printf(
+//         "Ground material:   %d\n",
+//         material_counts[3]
+//     );
+
+//     printf(
+//         "Total:              %d\n",
+//         material_counts[0]
+//         + material_counts[1]
+//         + material_counts[2]
+//         + material_counts[3]
+//     );
+
+//     printf(
+//         "Scene creation: %.3f s\n",
+//         (double)(end - start) /
+//         CLOCKS_PER_SEC
+//     );
+
+
+//     /*
+//      * ============================================================
+//      * Render
+//      * ============================================================
+//      */
+
+//     render(
+//         f,
+//         &scene,
+//         &cam,
+//         &settings
+//     );
+
+
+//     fclose(f);
+
+//     return 0;
+// }

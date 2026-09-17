@@ -12,7 +12,7 @@
 HitResult get_first_plane(Ray *ray, DynArray *planes);
 int is_shaded_by_plane(Ray *ray, DynArray *planes);
 
-HitResult get_first_object(Ray *ray, BVH8Tree *bvh);
+HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials);
 int is_shaded_by_object(Ray *ray, BVH8Tree *bvh);
 
 HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh);

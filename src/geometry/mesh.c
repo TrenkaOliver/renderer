@@ -7,16 +7,6 @@
 #include "scene/scene.h"
 #include "image/stb_image.h"
 
-Material no_material = {
-    .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
-    .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
-    .shininess = 1,
-    .reflectivity = 0,
-    .diffuse_map = (size_t)-1,
-    .splecular_map = (size_t)-1,
-    .normal_map = (size_t)-1,
-};
-
 void create_path(char *buff, char *file_name, char *child_name);
 size_t import_texture(char *line, char *mtl_path, Scene *scene);
 
@@ -63,6 +53,10 @@ size_t import_texture(char *line, char *mtl_path, Scene *scene) {
 size_t import_mesh(Scene *scene, char *file_name) {
     FILE *f = fopen(file_name, "r");
 
+    Material *active_material = NULL;
+    uint32_t active_material_id;
+    DynArray m_idx = create_dyn_array(sizeof(MaterialEntry), 16);
+
     uint32_t out = grow_dyn_array(&scene->meshes);
     Mesh *mesh = get_element(out, &scene->meshes);
 
@@ -83,7 +77,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
         .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
     };
 
-    char line[128];
+    char line[128], mtl_name[128];
 
     while (fgets(line, 128, f)) {
         double x, y, z;
@@ -109,8 +103,42 @@ size_t import_mesh(Scene *scene, char *file_name) {
             FILE *m = fopen(mtl_path, "r");
             if (!m) continue;
 
-            //handle materials
+            printf("Loading material file: %s\n", mtl_path);
+
+            int illium;
+
+            while (fgets(line, 128, m)) {
+                if (sscanf(line, "newmtl %s", mtl_name) == 1) {
+                    active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
+                    active_material->reflectivity = 0.0;
+                    active_material->diffuse_map = (size_t)-1;
+                    active_material->normal_map = (size_t)-1;
+                } else if (sscanf(line, "Kd %lf %lf %lf", &x, &y, &z) == 3) {
+                    active_material->diffuse = vec(x, y, z);
+                } else if (sscanf(line, "Ks %lf %lf %lf", &x, &y, &z) == 3) {
+                    active_material->specular = vec(x, y, z);
+                } else if (sscanf(line, "Ns %lf", &x) == 1) {
+                    active_material->shininess = x;
+                } else if (sscanf(line, "illum %d", &illium) == 1) {
+                    switch (illium) {
+                    case 0:
+                        active_material->diffuse = vec(0.0, 0.0, 0.0);
+                        active_material->specular = vec(0.0, 0.0, 0.0);
+                        break;
+                    case 1:
+                        active_material->specular = vec(0.0, 0.0, 0.0);
+                    default:
+                        break;
+                    }
+
+                } else if (strncmp(line, "map_Kd ", 7) == 0) {
+                    active_material->diffuse_map = import_texture(line + 7, mtl_path, scene);
+                }
+            }
+
             fclose(m);
+        } else if (sscanf(line, "usemtl %s", mtl_name) == 1 && active_material != NULL) {
+            active_material_id = get_material_id(mtl_name, &m_idx);
         } else if (line[0] == 'f' && line[1] == ' ') {
             char *p = line + 2;
             uint32_t count = 0;
@@ -167,7 +195,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     idx[i].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i].vt,
                     idx[i + 1].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i + 1].vt,
 
-                    &no_material,
+                    active_material_id,
                     scene
                 );
 
@@ -198,8 +226,6 @@ size_t import_mesh(Scene *scene, char *file_name) {
     mesh->rotation = vec(0.0, 0.0, 0.0);
     mesh->size = vec(aabb.max[0] - aabb.min[0], aabb.max[1] - aabb.min[1], aabb.max[2] - aabb.min[2]);
     mesh->aabb = aabb;
-
-    printf("size: %f %f %f aabb min: %f %f %f max: %f %f %f\n", mesh->size.x, mesh->size.y, mesh->size.z, aabb.min[0], aabb.min[1], aabb.min[2], aabb.max[0], aabb.max[1], aabb.max[2]);
 
     return out;
 

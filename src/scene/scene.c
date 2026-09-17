@@ -12,6 +12,16 @@ Vec RIGHT = {.x = 1.0, .y = 0.0, .z = 0.0};
 Vec FORWARD = {.x = 0.0, .y = 1.0, .z = 0.0};
 Vec UP = {.x = 0.0, .y = 0.0, .z = 1.0};
 
+Material no_material = {
+    .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
+    .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
+    .shininess = 1,
+    .reflectivity = 0,
+    .diffuse_map = (size_t)-1,
+    .splecular_map = (size_t)-1,
+    .normal_map = (size_t)-1,
+};
+
 Scene create_scene() {
     Scene scene;
 
@@ -60,7 +70,7 @@ Scene create_scene() {
 
         .aabb = malloc(scene.triangle_capacity * sizeof(AABB)),
         .centroid = malloc(scene.triangle_capacity * 3 * sizeof(float)),
-        .material = malloc(scene.triangle_capacity * sizeof(Material *))
+        .material = malloc(scene.triangle_capacity * sizeof(uint32_t))
     };
 
     scene.dir_light = (DirectionalLight){
@@ -73,6 +83,10 @@ Scene create_scene() {
     scene.dir_light.scaled_color = scale(scene.dir_light.color, scene.dir_light.intensity);
 
     scene.global_ambient = vec(0.33, 0.33, 0.33);
+
+    grow_dyn_array(&scene.materials);
+    Material *mat = get_element(0, &scene.materials);
+    *mat = no_material;
 
     return scene;
 }
@@ -117,7 +131,7 @@ size_t add_plane(Scene *scene, Vec o, Vec n, Material *m) {
 //     return i;
 // }
 
-size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, Material *m) {
+size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, uint32_t m) {
     // Object *ptr;
     // size_t i;
 
@@ -273,7 +287,7 @@ uint32_t add_vertex_texcoord(float u, float v, Scene *scene) {
     return i;
 }
 
-uint32_t add_triangle_from_indices(uint32_t ai, uint32_t bi, uint32_t ci, uint32_t nai, uint32_t nbi, uint32_t nci, uint32_t tai, uint32_t tbi, uint32_t tci, Material *material, Scene *scene) {
+uint32_t add_triangle_from_indices(uint32_t ai, uint32_t bi, uint32_t ci, uint32_t nai, uint32_t nbi, uint32_t nci, uint32_t tai, uint32_t tbi, uint32_t tci, uint32_t material, Scene *scene) {
     uint32_t i = scene->triangle_count;
 
     scene->triangle_count += 1;
@@ -299,7 +313,7 @@ uint32_t add_triangle_from_indices(uint32_t ai, uint32_t bi, uint32_t ci, uint32
 
         scene->triangles.aabb = realloc(scene->triangles.aabb, scene->triangle_capacity * sizeof(AABB));
         scene->triangles.centroid = realloc(scene->triangles.centroid, scene->triangle_capacity * 3 * sizeof(float));
-        scene->triangles.material = realloc(scene->triangles.material, scene->triangle_capacity * sizeof(Material *));
+        scene->triangles.material = realloc(scene->triangles.material, scene->triangle_capacity * sizeof(uint32_t));
     }
 
     scene->triangles.ai[i] = ai;

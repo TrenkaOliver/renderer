@@ -53,7 +53,7 @@ typedef struct BuildingTriangle {
 
     AABB *aabb;
     float *centroid;
-    Material **material;
+    uint32_t *material;
     
 } BuildingTriangle;
 

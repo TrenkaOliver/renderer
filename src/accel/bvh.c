@@ -278,7 +278,7 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             float tmp_centroid_y = building_triangles.centroid[left * 3 + 1];
             float tmp_centroid_z = building_triangles.centroid[left * 3 + 2];
 
-            void *tmp_material = building_triangles.material[left];
+            uint32_t tmp_material = building_triangles.material[left];
 
             building_triangles.ai[left] = building_triangles.ai[right];
             building_triangles.bi[left] = building_triangles.bi[right];

@@ -19,7 +19,7 @@ static inline void move_near_fw(uint32_t idx[], float t[], int count) {
     }
 }
 
-HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
+HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials) {
     PackedInfo info;
     uint32_t sp, idx_stack[128], idx, best_idx;
     __m256 ps_t_aabb, ps_t_triangle, ps_t_min, valid;
@@ -94,7 +94,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
     if (best_idx == -1) 
         return (HitResult){.t = -1.0};
     else
-        return triangle_result(t_min, u, v, best_idx, ray, &bvh->runtime_triangles, &bvh->building_triangles, bvh->vertices);
+        return triangle_result(t_min, u, v, best_idx, ray, &bvh->runtime_triangles, &bvh->building_triangles, bvh->vertices, materials);
 }
 
 int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
