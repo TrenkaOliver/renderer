@@ -31,6 +31,8 @@ typedef struct BVH8Tree {
     SoATriangle triangles;
 } BVH8Tree;
 
+extern uint32_t object_count;
+
 BVH create_bvh(Object *first, size_t count);
 BVH8Tree create_bvh8_tree(Object *first, size_t count);
 

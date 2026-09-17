@@ -22,6 +22,7 @@ static Object **ptr_array;
 static BVHNode *nodes;
 uint32_t node_count;
 uint32_t leaf_count = 0;
+uint32_t object_count;
 
 float get_surface_area(uint32_t start, uint32_t end);
 float SA(AABB aabb);
@@ -35,6 +36,7 @@ BVH create_bvh(Object *first, size_t count) {
 
     bvh.nodes = nodes = calloc(count * 2 - 1, sizeof(BVHNode));
     bvh.objects = ptr_array = calloc(count, sizeof(Object *));
+    object_count = count;
 
     for (i = 0; i < count; i++) ptr_array[i] = first + i;
 

@@ -19,6 +19,27 @@ static inline void move_near_fw(uint32_t idx[], float t[], int count) {
     }
 }
 
+// HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
+//     Info info, best_info;
+//     Object *closest = NULL;
+//     double t_min = DBL_MAX;
+//     for (uint32_t i = 0; i < object_count; i++) {
+//         double t = triangle_ray_intersection(bvh->objects[i], ray, &info);
+//         if (t >= 0.0 && t < t_min) {
+//             printf("hit\n");
+//             t_min = t;
+//             closest = bvh->objects[i];
+//             best_info = info;
+//         }
+//     } 
+
+//     if (closest) {
+//         return get_triangle_result(ray, closest, &best_info, t_min);
+//     } else {
+//         return (HitResult) {.t = -1.0};
+//     }
+// }
+
 HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
     uint32_t sp, idx_stack[128], idx, best_idx;
     __m256 ps_t_aabb, ps_t_triangle, ps_t_min, valid;
@@ -62,6 +83,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
                 if (t_values[lane] >= 0.0f && t_values[lane] < t_min) {
+                    printf("hit\n");
                     t_min = t_values[lane];
                     ps_t_min = _mm256_set1_ps(t_min);
                     best_idx = bvh->nodes[idx].idx[i] + lane;
