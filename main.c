@@ -193,17 +193,17 @@ int create_import_scene(void) {
     };
 
     Camera cam = create_look_at_camera(
-        vec(0.0, -50.0, 50.0),
+        vec(0.0, -100.0, 0.0),
         vec(0.0, 0.0, 0.0),
         1.0472
     );
 
     scene.dir_light.dir = normalize(vec(-0.4, -0.7, 1.0));
 
-    size_t mesh_id = import_mesh(&scene, "./models/body.obj");
+    size_t mesh_id = import_mesh(&scene, "./models/tree.obj");
     Mesh *mesh = get_element(mesh_id, &scene.meshes);
     scale_mesh(&scene, mesh, vec(2.0, 2.0, 2.0));
-    rotate_mesh(&scene, mesh, vec(0.0, 0.0, -2.0));
+    //rotate_mesh(&scene, mesh, vec(0.3, 0.1, 0.2));
     apply_mesh_transform(mesh);
     set_mesh_position(&scene, mesh, vec(
         mesh->size.x * -0.5,

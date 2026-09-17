@@ -20,9 +20,10 @@ static inline void move_near_fw(uint32_t idx[], float t[], int count) {
 }
 
 HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
+    PackedInfo info;
     uint32_t sp, idx_stack[128], idx, best_idx;
     __m256 ps_t_aabb, ps_t_triangle, ps_t_min, valid;
-    float t_min, t_values[8], t_stack[128];
+    float t_min, t_values[8], t_stack[128], u, u_values[8], v, v_values[8];
     int valid_mask;
 
     ps_t_min = _mm256_set1_ps(FLT_MAX);
@@ -56,13 +57,17 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
 
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles, &info);
 
             _mm256_storeu_ps(t_values, ps_t_triangle);
+            _mm256_storeu_ps(u_values, info.u);
+            _mm256_storeu_ps(v_values, info.v);
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
                 if (t_values[lane] >= 0.0f && t_values[lane] < t_min) {
                     t_min = t_values[lane];
+                    u = u_values[lane];
+                    v = v_values[lane];
                     ps_t_min = _mm256_set1_ps(t_min);
                     best_idx = bvh->nodes[idx].idx[i] + lane;
                 }
@@ -89,13 +94,13 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh) {
     if (best_idx == -1) 
         return (HitResult){.t = -1.0};
     else
-        return triangle_result(t_min, best_idx, ray, &bvh->runtime_triangles);
+        return triangle_result(t_min, u, v, best_idx, ray, &bvh->runtime_triangles, &bvh->building_triangles, bvh->vertices);
 }
 
 int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
+    PackedInfo info;
     uint32_t sp, idx_stack[128], idx;
     Object *object;
-    Info info;    
     __m256 ps_t_aabb, ps_t_triangle, valid;
     float t, t_values[8];
     int valid_mask;
@@ -122,7 +127,7 @@ int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
 
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles, &info);
             _mm256_storeu_ps(t_values, ps_t_triangle);
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {

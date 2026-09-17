@@ -3,6 +3,7 @@
 
 #include "math/vec.h"
 #include "light/material.h"
+#include <immintrin.h>
 
 typedef struct HitResult {
     Vec point;
@@ -19,6 +20,11 @@ typedef struct Info {
     double v;
     double w;
 } Info;
+
+typedef struct PackedInfo {
+    __m256 u;
+    __m256 v;
+} PackedInfo;
 
 
 #endif

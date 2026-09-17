@@ -21,7 +21,9 @@ typedef struct Bin {
 static BuildingTriangle building_triangles;
 static BVHNode *nodes;
 uint32_t node_count;
-uint32_t leaf_count = 0;
+//uint32_t leaf_count = 0;
+
+uint32_t triangles_offset = 0;
 
 float get_surface_area(uint32_t start, uint32_t end);
 float SA(AABB aabb);
@@ -52,7 +54,7 @@ BVH create_bvh(BuildingTriangle *first, size_t count) {
         .centroid = malloc(count * 3 * sizeof(float)),
         .material = malloc(count * sizeof(void *))
     };
-    
+
     bvh.triangles = (BuildingTriangle) {
         .ai = building_triangles.ai,
         .bi = building_triangles.bi,
@@ -114,7 +116,7 @@ float SA(AABB aabb) {
     x = aabb.max[0] - aabb.min[0];
     y = aabb.max[1] - aabb.min[1];
     z = aabb.max[2] - aabb.min[2];
-    
+
 
     return 2 * (x * y + x * z + y * z);
 }
@@ -129,7 +131,7 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
         .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
     };
 
-    if (count) 
+    if (count)
         for (i = 0; i < count; i++) aabb = aabb_merge(aabb, building_triangles.aabb[first_or_right + i]);
     else
         aabb = aabb_merge(nodes[idx + 1].aabb, nodes[first_or_right].aabb);
@@ -141,7 +143,7 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
     };
 
     node_count++;
-    if (count) leaf_count++;
+    triangles_offset += count;
 
 
     return idx + 1;
@@ -149,9 +151,9 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
 
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
     uint32_t count = end - start;
-    
+
     if (count <= LEAF_SIZE) return create_node(start, count, idx);
-    
+
     Bin bins[BIN_COUNT];
     uint32_t i;
     float parent_sa = get_surface_area(start, end);
@@ -174,12 +176,12 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
 
         float cent_min = FLT_MAX;
         float cent_max = -FLT_MAX;
-        
+
         for (i = start; i < end; i++) {
             cent_min = fminf(cent_min, building_triangles.centroid[i * 3 + axis]);
             cent_max = fmaxf(cent_max, building_triangles.centroid[i * 3 + axis]);
         }
-        
+
         if (cent_min == cent_max) continue;
 
         float inv_width = BIN_COUNT / (cent_max - cent_min);
@@ -216,16 +218,16 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
         for (i = 0; i < BIN_COUNT - 1; i++) {
             if (left_count[i] == 0 || right_count[i + 1] == 0) continue;
 
-            float cost = 
+            float cost =
             (SA(left_bounds[i]) / parent_sa) * left_count[i] +
             (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1];
-            
+
             if (cost < best_cost) {
                 best_cost = cost;
                 best_cent_min = cent_min;
                 best_inv_width = inv_width;
                 best_split = i;
-                best_axis = axis;                
+                best_axis = axis;
             }
         }
     }
@@ -325,7 +327,7 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             building_triangles.centroid[right * 3 + 2] = tmp_centroid_z;
 
             building_triangles.material[right] = tmp_material;
-            
+
             left++;
             right--;
         }
@@ -345,7 +347,6 @@ BVH8Node *bvh8nodes;
 
 RuntimeTriangle *triangles_ptr;
 uint32_t next = 0;
-uint32_t triangles_offset = 0;
 
 
 BVH8Tree create_bvh8_tree(BuildingTriangle *first, Vertex *vertices, size_t count) {
@@ -356,13 +357,10 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, Vertex *vertices, size_t coun
     bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
 
     RuntimeTriangle runtime_triangles;
-
-    triangles_offset = 8 * leaf_count;
     runtime_triangles.offset = triangles_offset;
 
-    runtime_triangles.arr = malloc(25 * triangles_offset * sizeof(float));
-    runtime_triangles.building_idx = malloc(leaf_count * 8 * sizeof(uint32_t));
-    runtime_triangles.mat_ptr_arr = malloc(leaf_count * 8 * sizeof(void *));
+    runtime_triangles.arr = malloc(9 * triangles_offset * sizeof(float) + 7 * sizeof(float));
+    runtime_triangles.building_idx = malloc(triangles_offset * sizeof(uint32_t));
 
     triangles_ptr = &runtime_triangles;
 
@@ -370,6 +368,7 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, Vertex *vertices, size_t coun
 
     BVH8Tree bvh8tree = {
         .nodes = bvh8nodes,
+        .vertices = vertices,
         .building_triangles = (BuildingTriangle) {
             .ai = bvh.triangles.ai,
             .bi = bvh.triangles.bi,
@@ -406,25 +405,25 @@ void setup_leaf(BVH *bvh, Vertex *vertices, uint32_t first_triangle, uint32_t co
         triangles_ptr->arr[next + triangles_offset * 6 + i] = vertices->x[building_triangles.ci[first_triangle + i]];
         triangles_ptr->arr[next + triangles_offset * 7 + i] = vertices->y[building_triangles.ci[first_triangle + i]];
         triangles_ptr->arr[next + triangles_offset * 8 + i] = vertices->z[building_triangles.ci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 9 + i] = vertices->nx[building_triangles.nai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 10 + i] = vertices->ny[building_triangles.nai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 11 + i] = vertices->nz[building_triangles.nai[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 12 + i] = vertices->nx[building_triangles.nbi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 13 + i] = vertices->ny[building_triangles.nbi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 14 + i] = vertices->nz[building_triangles.nbi[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 15 + i] = vertices->nx[building_triangles.nci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 16 + i] = vertices->ny[building_triangles.nci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 17 + i] = vertices->nz[building_triangles.nci[first_triangle + i]];
-        triangles_ptr->arr[next + triangles_offset * 18 + i] = building_triangles.nx[first_triangle + i];
-        triangles_ptr->arr[next + triangles_offset * 19 + i] = building_triangles.ny[first_triangle + i];
-        triangles_ptr->arr[next + triangles_offset * 20 + i] = building_triangles.nz[first_triangle + i];
-        triangles_ptr->arr[next + triangles_offset * 21 + i] = 0.0f;
-        triangles_ptr->arr[next + triangles_offset * 22 + i] = 0.0f;
-        triangles_ptr->arr[next + triangles_offset * 23 + i] = 0.0f;
-        triangles_ptr->arr[next + triangles_offset * 24 + i] = 0.0f;
+        // triangles_ptr->arr[next + triangles_offset * 9 + i] = vertices->nx[building_triangles.nai[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 10 + i] = vertices->ny[building_triangles.nai[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 11 + i] = vertices->nz[building_triangles.nai[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 12 + i] = vertices->nx[building_triangles.nbi[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 13 + i] = vertices->ny[building_triangles.nbi[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 14 + i] = vertices->nz[building_triangles.nbi[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 15 + i] = vertices->nx[building_triangles.nci[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 16 + i] = vertices->ny[building_triangles.nci[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 17 + i] = vertices->nz[building_triangles.nci[first_triangle + i]];
+        // triangles_ptr->arr[next + triangles_offset * 18 + i] = building_triangles.nx[first_triangle + i];
+        // triangles_ptr->arr[next + triangles_offset * 19 + i] = building_triangles.ny[first_triangle + i];
+        // triangles_ptr->arr[next + triangles_offset * 20 + i] = building_triangles.nz[first_triangle + i];
+        // triangles_ptr->arr[next + triangles_offset * 21 + i] = 0.0f;
+        // triangles_ptr->arr[next + triangles_offset * 22 + i] = 0.0f;
+        // triangles_ptr->arr[next + triangles_offset * 23 + i] = 0.0f;
+        // triangles_ptr->arr[next + triangles_offset * 24 + i] = 0.0f;
 
         triangles_ptr->building_idx[next + i] = first_triangle + i;
-        triangles_ptr->mat_ptr_arr[next + i] = building_triangles.material[first_triangle + i];
+        // triangles_ptr->mat_ptr_arr[next + i] = building_triangles.material[first_triangle + i];
     }
 }
 
@@ -443,7 +442,7 @@ uint32_t collapse_bvh_node(BVH *bvh, Vertex *vertices, uint32_t idx) {
         indices[0] = next;
         next += primitive_count[0];
     }
-    
+
     indices[1] = bvh->nodes[idx].first_primitive_or_right_child;
     bounds[1] = bvh->nodes[indices[1]].aabb;
     primitive_count[1] = bvh->nodes[indices[1]].primitive_count;
@@ -469,7 +468,7 @@ uint32_t collapse_bvh_node(BVH *bvh, Vertex *vertices, uint32_t idx) {
 
             if (primitive_count[i]) continue;
 
-            cost = 
+            cost =
             current_cost
             - SA(bounds[i])
             + SA(bvh->nodes[indices[i] + 1].aabb)
@@ -532,18 +531,18 @@ uint32_t collapse_bvh_node(BVH *bvh, Vertex *vertices, uint32_t idx) {
             right--;
         }
     }
-    
+
     if (bvh8node_count == bvh8node_capacity) {
         bvh8node_capacity *= 2;
-        
+
         char *new_ptr = malloc(bvh8node_capacity * sizeof(BVH8Node) + 32);
         uint32_t new_offset = 32 - (size_t)new_ptr % 32;
         new_ptr += new_offset;
-        
+
         memcpy(new_ptr, bvh8nodes, bvh8node_count * sizeof(BVH8Node));
 
         free((char *)bvh8nodes - bvh8nodes_offset);
-        
+
         bvh8nodes = (BVH8Node *)new_ptr;
         bvh8nodes_offset = new_offset;
 
@@ -553,18 +552,18 @@ uint32_t collapse_bvh_node(BVH *bvh, Vertex *vertices, uint32_t idx) {
         // bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
     }
 
-    uint32_t node_index = bvh8node_count++;    
+    uint32_t node_index = bvh8node_count++;
     uint32_t child_indices[8];
-    
+
     for (int i = 0; i < left; i++) {
         child_indices[i] = collapse_bvh_node(bvh, vertices, indices[i]);
-    }    
-    
+    }
+
     BVH8Node *node_ptr = bvh8nodes + node_index;
 
     for (int i = 0; i < left; i++) {
         indices[i] = child_indices[i];
-    }    
+    }
 
     float min_x[8];
     float min_y[8];
@@ -600,8 +599,8 @@ uint32_t collapse_bvh_node(BVH *bvh, Vertex *vertices, uint32_t idx) {
     node_ptr->bounds.min.z = _mm256_loadu_ps(min_z);
     node_ptr->bounds.max.x = _mm256_loadu_ps(max_x);
     node_ptr->bounds.max.y = _mm256_loadu_ps(max_y);
-    node_ptr->bounds.max.z = _mm256_loadu_ps(max_z);    
-    
+    node_ptr->bounds.max.z = _mm256_loadu_ps(max_z);
+
     node_ptr->internal_count = left;
     node_ptr->leaf_count = count - left;
 

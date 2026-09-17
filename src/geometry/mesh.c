@@ -123,27 +123,27 @@ size_t import_mesh(Scene *scene, char *file_name) {
                 long long v, vt, vn;
 
                 v = strtoll(p, &p, 10);
-                v = v < 0 ? (size_t)(mesh->vertex_pos_count + v) : (size_t)(v - 1);
+                v = v < 0 ? (uint32_t)(mesh->vertex_pos_count + v) : (uint32_t)(v - 1);
                 if (*p == '/') {
                     p++;
 
                     if (*p != '/') {
                         long long vt = strtoll(p, &p, 10);
-                        vt = vt < 0 ? (size_t)(mesh->vertex_texcoord_count + vt) : (size_t)(vt - 1);
+                        vt = vt < 0 ? (uint32_t)(mesh->vertex_texcoord_count + vt) : (uint32_t)(vt - 1);
                     } else {
-                        vt = (size_t)-1;
+                        vt = (uint32_t)-1;
                     }
 
                     if (*p == '/') {
                         p++;
                         vn = strtoll(p, &p, 10);
-                        vn = vn < 0 ? (size_t)(mesh->vertex_normal_count + vn) : (size_t)(vn - 1);
+                        vn = vn < 0 ? (uint32_t)(mesh->vertex_normal_count + vn) : (uint32_t)(vn - 1);
                     } else {
-                        vn = (size_t)-1;
+                        vn = (uint32_t)-1;
                     }
                 } else {
-                    vt = (size_t)-1;
-                    vn = (size_t)-1;
+                    vt = (uint32_t)-1;
+                    vn = (uint32_t)-1;
                 }
 
                 idx[count++] = (Face){.v = v, .vt = vt, .vn = vn};
@@ -159,13 +159,13 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     mesh->first_vertex_pos + idx[i].v,
                     mesh->first_vertex_pos + idx[i + 1].v,
 
-                    idx[0].vn == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_normal + idx[0].vn,
-                    idx[i].vn == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_normal + idx[i].vn,
-                    idx[i + 1].vn == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_normal + idx[i + 1].vn,
+                    idx[0].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[0].vn,
+                    idx[i].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[i].vn,
+                    idx[i + 1].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[i + 1].vn,
 
-                    idx[0].vt == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_texcoord + idx[0].vt,
-                    idx[i].vt == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_texcoord + idx[i].vt,
-                    idx[i + 1].vt == (size_t)-1 ? (size_t)-1 : mesh->first_vertex_texcoord + idx[i + 1].vt,
+                    idx[0].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[0].vt,
+                    idx[i].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i].vt,
+                    idx[i + 1].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i + 1].vt,
 
                     &no_material,
                     scene

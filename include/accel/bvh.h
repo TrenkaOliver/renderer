@@ -28,6 +28,7 @@ typedef struct BVH8Node {
 
 typedef struct BVH8Tree {
     BVH8Node *nodes;
+    Vertex *vertices;
     BuildingTriangle building_triangles;
     RuntimeTriangle runtime_triangles;
 } BVH8Tree;

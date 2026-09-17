@@ -6,7 +6,7 @@
 
 #define EPSILON 1e-8
 
-__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array) {
+__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info) {
     ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset + idx),
@@ -62,6 +62,9 @@ __m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *
 
     __m256 t = _mm256_mul_ps(ps_dot(ac, cross_ao_ab), inv_denom);
 
+    info->u = u;
+    info->v = v;
+
     return _mm256_blendv_ps(_mm256_set1_ps(-1.0f), t, valid);
 }
 
@@ -115,16 +118,43 @@ HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
     return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
 }
 
-HitResult triangle_result(float t, uint32_t idx, Ray *ray, RuntimeTriangle *triangles) {
+HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, Vertex *vertices) {
     Vec p = v_add(ray->o, scale(ray->v, t));
 
+    uint32_t i = runtime_triangles->building_idx[idx];
     Vec ng = {
-        .x = triangles->arr[triangles->offset * 18 + idx],
-        .y = triangles->arr[triangles->offset * 19 + idx],
-        .z = triangles->arr[triangles->offset * 20 + idx]
+        .x = building_triangles->nx[i],
+        .y = building_triangles->ny[i],
+        .z = building_triangles->nz[i]
     };
 
-    Material *m = triangles->mat_ptr_arr[idx];
+    if (building_triangles->nai[i] == (uint32_t)-1) {
+        return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = building_triangles->material[i], .d_u = NAN, .d_v = NAN};
+    }
 
-    return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
+    float w = 1 - u - v;
+
+    Vec na = {
+        .x = vertices->nx[building_triangles->nai[i]],
+        .y = vertices->ny[building_triangles->nai[i]],
+        .z = vertices->nz[building_triangles->nai[i]]
+    };
+
+    Vec nb = {
+        .x = vertices->nx[building_triangles->nbi[i]],
+        .y = vertices->ny[building_triangles->nbi[i]],
+        .z = vertices->nz[building_triangles->nbi[i]]
+    };
+
+    Vec nc = {
+        .x = vertices->nx[building_triangles->nci[i]],
+        .y = vertices->ny[building_triangles->nci[i]],
+        .z = vertices->nz[building_triangles->nci[i]]
+    };
+
+    Vec ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
+
+    Material *m = building_triangles->material[idx];
+
+    return (HitResult){.point = p, .ng = ng, .ns = ns, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
 }

@@ -60,9 +60,7 @@ typedef struct BuildingTriangle {
 typedef struct RuntimeTriangle {
     float *arr;
     uint32_t offset;
-
     uint32_t *building_idx;
-    Material **mat_ptr_arr;
 } RuntimeTriangle;
 
 #endif
