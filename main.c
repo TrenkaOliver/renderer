@@ -158,8 +158,8 @@ Material ground_mat = {
 };
 
 
-#define WIDTH 640
-#define HEIGHT 360
+#define WIDTH 1920
+#define HEIGHT 1080
 
 #define AA 1
 #define MAX_DEPTH 2
@@ -193,7 +193,7 @@ int create_import_scene(void) {
     };
 
     Camera cam = create_look_at_camera(
-        vec(0.0, -200.0, 200.0),
+        vec(0.0, -50.0, 50.0),
         vec(0.0, 0.0, 0.0),
         1.0472
     );
@@ -202,15 +202,15 @@ int create_import_scene(void) {
 
     size_t mesh_id = import_mesh(&scene, "./models/body.obj");
     Mesh *mesh = get_element(mesh_id, &scene.meshes);
-
-    set_mesh_rotation(&scene, mesh, vec(1.5, 0.0, 0.0));
+    scale_mesh(&scene, mesh, vec(2.0, 2.0, 2.0));
+    rotate_mesh(&scene, mesh, vec(0.0, 0.0, -2.0));
     apply_mesh_transform(mesh);
     set_mesh_position(&scene, mesh, vec(
         mesh->size.x * -0.5,
         mesh->size.y * -0.5,
         mesh->size.z * -0.5
     ));
-    scale_mesh(&scene, mesh, vec(100, 100, 100));
+
 
     clock_t end = clock();
 

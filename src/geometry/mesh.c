@@ -11,7 +11,10 @@ Material no_material = {
     .diffuse = {.x = 1.0, .y = 1.0, .z = 1.0},
     .specular = {.x = 0.0, .y = 0.0, .z = 0.0},
     .shininess = 1,
-    .reflectivity = 0
+    .reflectivity = 0,
+    .diffuse_map = (size_t)-1,
+    .splecular_map = (size_t)-1,
+    .normal_map = (size_t)-1,
 };
 
 void create_path(char *buff, char *file_name, char *child_name);
@@ -85,10 +88,10 @@ size_t import_mesh(Scene *scene, char *file_name) {
     while (fgets(line, 128, f)) {
         double x, y, z;
         if (sscanf(line, "v %lf %lf %lf", &x, &y, &z) == 3) {
-            add_vertex_pos(x, y, z, scene);
+            add_vertex_pos(x, -z, y, scene);
             mesh->vertex_pos_count++;
         } else if (sscanf(line, "vn %lf %lf %lf", &x, &y, &z) == 3) {
-            add_vertex_normal(x, y, z, scene);
+            add_vertex_normal(x, -z, y, scene);
             mesh->vertex_normal_count++;
         } else if (sscanf(line, "vt %lf %lf", &x, &y) == 2) {
             add_vertex_texcoord(x, y, scene);
