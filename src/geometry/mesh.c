@@ -107,7 +107,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
 
             int illium;
 
-            while (fgets(line, 128, m)) {
+            while (fgets(line, 512, m)) {
                 if (sscanf(line, "newmtl %s", mtl_name) == 1) {
                     active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
                     active_material->reflectivity = 0.0;
@@ -157,12 +157,12 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     p++;
 
                     if (*p != '/') {
-                        long long vt = strtoll(p, &p, 10);
+                        vt = strtoll(p, &p, 10);
                         vt = vt < 0 ? (uint32_t)(mesh->vertex_texcoord_count + vt) : (uint32_t)(vt - 1);
                     } else {
                         vt = (uint32_t)-1;
                     }
-
+                    
                     if (*p == '/') {
                         p++;
                         vn = strtoll(p, &p, 10);
@@ -190,6 +190,8 @@ size_t import_mesh(Scene *scene, char *file_name) {
                 // if (idx[i + 1].vn == (uint32_t)-1) {
                 //     printf("line: %s\n\n", line);
                 // }
+
+                //printf("%u\n", idx[0].vt);
 
                 add_triangle_from_indices(
                     mesh->first_vertex_pos + idx[0].v,

@@ -130,40 +130,60 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
 
     Material *m = ((Material *)materials->ptr) + building_triangles->material[i];
 
+    float w = 1 - u - v;
+
+    Vec ns;
+
     if (building_triangles->nai[i] == (uint32_t)-1) {
-        return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
+        ns = ng;
+    } else {
+        Vec na = {
+            .x = vertices->nx[building_triangles->nai[i]],
+            .y = vertices->ny[building_triangles->nai[i]],
+            .z = vertices->nz[building_triangles->nai[i]]
+        };
+
+        Vec nb = {
+            .x = vertices->nx[building_triangles->nbi[i]],
+            .y = vertices->ny[building_triangles->nbi[i]],
+            .z = vertices->nz[building_triangles->nbi[i]]
+        };
+
+        Vec nc = {
+            .x = vertices->nx[building_triangles->nci[i]],
+            .y = vertices->ny[building_triangles->nci[i]],
+            .z = vertices->nz[building_triangles->nci[i]]
+        };
+
+        ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
     }
 
-    float w = 1 - u - v;
+    double d_u, d_v;
+
+    if (building_triangles->tai[i] == (uint32_t)-1) {
+        d_u = NAN;
+        d_v = NAN;
+    } else {
+        d_u = vertices->u[building_triangles->tai[i]] * w + vertices->u[building_triangles->tbi[i]] * u + vertices->u[building_triangles->tci[i]] * v;
+        d_v = vertices->v[building_triangles->tai[i]] * w + vertices->v[building_triangles->tbi[i]] * u + vertices->v[building_triangles->tci[i]] * v;
+    }
+    
+
+    // if (building_triangles->nai[i] == (uint32_t)-1) {
+    //     return (HitResult){.point = p, .ng = ng, .ns = ng, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
+    // }
+
 
     // printf("max: %u\n", (uint32_t)-1);
     // printf("nai[i]: %u\n", building_triangles->nai[i]);
     // printf("nbi[i]: %u\n", building_triangles->nbi[i]);
     // printf("nci[i]: %u\n\n", building_triangles->nci[i]);
 
-    if (building_triangles->nai[i] == (size_t)-1) printf("nai none\n");
-    if (building_triangles->nbi[i] == (size_t)-1) printf("nbi none\n");
-    if (building_triangles->nci[i] == (size_t)-1) printf("nci none\n");
+    // if (building_triangles->nai[i] == (size_t)-1) printf("nai none\n");
+    // if (building_triangles->nbi[i] == (size_t)-1) printf("nbi none\n");
+    // if (building_triangles->nci[i] == (size_t)-1) printf("nci none\n");
 
-    Vec na = {
-        .x = vertices->nx[building_triangles->nai[i]],
-        .y = vertices->ny[building_triangles->nai[i]],
-        .z = vertices->nz[building_triangles->nai[i]]
-    };
 
-    Vec nb = {
-        .x = vertices->nx[building_triangles->nbi[i]],
-        .y = vertices->ny[building_triangles->nbi[i]],
-        .z = vertices->nz[building_triangles->nbi[i]]
-    };
 
-    Vec nc = {
-        .x = vertices->nx[building_triangles->nci[i]],
-        .y = vertices->ny[building_triangles->nci[i]],
-        .z = vertices->nz[building_triangles->nci[i]]
-    };
-
-    Vec ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
-
-    return (HitResult){.point = p, .ng = ng, .ns = ns, .t = t, .material = m, .d_u = NAN, .d_v = NAN};
+    return (HitResult){.point = p, .ng = ng, .ns = ns, .t = t, .material = m, .d_u = d_u, .d_v = d_v};
 }
