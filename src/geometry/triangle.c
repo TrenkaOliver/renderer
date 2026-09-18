@@ -136,6 +136,15 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
 
     float w = 1 - u - v;
 
+    // printf("max: %u\n", (uint32_t)-1);
+    // printf("nai[i]: %u\n", building_triangles->nai[i]);
+    // printf("nbi[i]: %u\n", building_triangles->nbi[i]);
+    // printf("nci[i]: %u\n\n", building_triangles->nci[i]);
+
+    if (building_triangles->nai[i] == (size_t)-1) printf("nai none\n");
+    if (building_triangles->nbi[i] == (size_t)-1) printf("nbi none\n");
+    if (building_triangles->nci[i] == (size_t)-1) printf("nci none\n");
+
     Vec na = {
         .x = vertices->nx[building_triangles->nai[i]],
         .y = vertices->ny[building_triangles->nai[i]],

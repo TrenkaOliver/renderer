@@ -79,6 +79,14 @@ BVH create_bvh(BuildingTriangle *first, size_t count) {
         bvh.triangles.bi[i] = first->bi[i];
         bvh.triangles.ci[i] = first->ci[i];
 
+        bvh.triangles.nai[i] = first->nai[i];
+        bvh.triangles.nbi[i] = first->nbi[i];
+        bvh.triangles.nci[i] = first->nci[i];
+
+        bvh.triangles.tai[i] = first->tai[i];
+        bvh.triangles.tbi[i] = first->tbi[i];
+        bvh.triangles.tci[i] = first->tci[i];
+
         bvh.triangles.nx[i] = first->nx[i];
         bvh.triangles.ny[i] = first->ny[i];
         bvh.triangles.nz[i] = first->nz[i];

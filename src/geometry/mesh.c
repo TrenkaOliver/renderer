@@ -54,7 +54,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
     FILE *f = fopen(file_name, "r");
 
     Material *active_material = NULL;
-    uint32_t active_material_id;
+    uint32_t active_material_id = 0;
     DynArray m_idx = create_dyn_array(sizeof(MaterialEntry), 16);
 
     uint32_t out = grow_dyn_array(&scene->meshes);
@@ -77,9 +77,9 @@ size_t import_mesh(Scene *scene, char *file_name) {
         .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
     };
 
-    char line[128], mtl_name[128];
+    char line[512], mtl_name[128];
 
-    while (fgets(line, 128, f)) {
+    while (fgets(line, 512, f)) {
         double x, y, z;
         if (sscanf(line, "v %lf %lf %lf", &x, &y, &z) == 3) {
             add_vertex_pos(x, -z, y, scene);
@@ -112,6 +112,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
                     active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
                     active_material->reflectivity = 0.0;
                     active_material->diffuse_map = (size_t)-1;
+                    active_material->splecular_map = (size_t)-1;
                     active_material->normal_map = (size_t)-1;
                 } else if (sscanf(line, "Kd %lf %lf %lf", &x, &y, &z) == 3) {
                     active_material->diffuse = vec(x, y, z);
@@ -137,7 +138,7 @@ size_t import_mesh(Scene *scene, char *file_name) {
             }
 
             fclose(m);
-        } else if (sscanf(line, "usemtl %s", mtl_name) == 1 && active_material != NULL) {
+        } else if (sscanf(line, "usemtl %s", mtl_name) == 1) {
             active_material_id = get_material_id(mtl_name, &m_idx);
         } else if (line[0] == 'f' && line[1] == ' ') {
             char *p = line + 2;
@@ -182,6 +183,14 @@ size_t import_mesh(Scene *scene, char *file_name) {
             }
 
             for (int i = 1; i < count - 1; i++) {
+                // if (idx[0].vn == (uint32_t)-1) printf("0  : %u, %u, %u\n", idx[0].vn, idx[i].vn, idx[i + 1].vn);
+                // if (idx[i].vn == (uint32_t)-1) printf("i  : %u, %u, %u\n", idx[0].vn, idx[i].vn, idx[i + 1].vn);
+                // if (idx[i + 1].vn == (uint32_t)-1) printf("i+1: %u, %u, %u\n", idx[0].vn, idx[i].vn, idx[i + 1].vn);
+
+                // if (idx[i + 1].vn == (uint32_t)-1) {
+                //     printf("line: %s\n\n", line);
+                // }
+
                 add_triangle_from_indices(
                     mesh->first_vertex_pos + idx[0].v,
                     mesh->first_vertex_pos + idx[i].v,

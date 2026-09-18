@@ -48,6 +48,8 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
 
     printf("Bvh creation: %.3f s\n", (double)(bvh_end - bvh_start) / CLOCKS_PER_SEC);
 
+    // printf("max_i: %u\n", scene->triangle_count);
+
     clock_t render_start = clock();
 
     for (i = 0; i < settings->height; i++) {
