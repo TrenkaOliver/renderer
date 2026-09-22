@@ -193,7 +193,7 @@ int create_import_scene(void) {
     };
 
     Camera cam = create_look_at_camera(
-        vec(0.0, -150.0, 150.0),
+        vec(0.0, -20.0, 20.0),
         vec(0.0, 0.0, 0.0),
         1.0472
     );

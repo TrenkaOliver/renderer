@@ -57,6 +57,57 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
                 ptr[idx + 1] / 255.0,
                 ptr[idx + 2] / 255.0
             );
+
+            //billinear version if want to switch later on
+            // unsigned char *ptr = get_element(hit.material->diffuse_map, &scene->textures);
+            // int w = ((int *)ptr)[0];
+            // int h = ((int *)ptr)[1];
+
+            // float x = hit.d_u * (w - 1);
+            // float y = (1.0 - hit.d_v) * (h - 1);
+
+            // int x0 = floorf(x);
+            // int y0 = floorf(y);
+
+            // int x1 = x0 + 1 < w ? x0 + 1 : x0;
+            // int y1 = y0 + 1 < h ? y0 + 1 : y0;
+
+            // float fx = x - x0;
+            // float fy = y - y0;
+
+            // int bottom_a_idx = (y0 * w + x0) * 3 + 2 * sizeof(int);
+            // int bottom_b_idx = (y0 * w + x1) * 3 + 2 * sizeof(int);
+            // int top_a_idx = (y1 * w + x0) * 3 + 2 * sizeof(int);
+            // int top_b_idx = (y1 * w + x1) * 3 + 2 * sizeof(int);
+
+            // Vec c_bottom_a = vec(
+            //     ptr[bottom_a_idx] / 255.0,
+            //     ptr[bottom_a_idx + 1] / 255.0,
+            //     ptr[bottom_a_idx + 2] / 255.0
+            // );
+
+            // Vec c_bottom_b = vec(
+            //     ptr[bottom_b_idx] / 255.0,
+            //     ptr[bottom_b_idx + 1] / 255.0,
+            //     ptr[bottom_b_idx + 2] / 255.0
+            // );
+
+            // Vec c_top_a = vec(
+            //     ptr[top_a_idx] / 255.0,
+            //     ptr[top_a_idx + 1] / 255.0,
+            //     ptr[top_a_idx + 2] / 255.0
+            // );
+
+            // Vec c_top_b = vec(
+            //     ptr[top_b_idx] / 255.0,
+            //     ptr[top_b_idx + 1] / 255.0,
+            //     ptr[top_b_idx + 2] / 255.0
+            // );
+
+            // Vec c_bottom = v_add(scale(c_bottom_a, 1 - fx), scale(c_bottom_b, fx));
+            // Vec c_top = v_add(scale(c_top_a, 1 - fx), scale(c_top_b, fx));
+
+            // c_base = v_add(scale(c_top, 1 - fy), scale(c_bottom, fy));
         } else {
             c_base = hit.material->diffuse;
         }
