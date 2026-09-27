@@ -70,92 +70,92 @@ static double random_double(double min, double max)
  * ============================================================
  */
 
-Material sphere_mat = {
-    .diffuse = {
-        .x = 0.08,
-        .y = 0.30,
-        .z = 0.95
-    },
+// Material sphere_mat = {
+//     .diffuse = {
+//         .x = 0.08,
+//         .y = 0.30,
+//         .z = 0.95
+//     },
 
-    .specular = {
-        .x = 0.9,
-        .y = 0.9,
-        .z = 0.9
-    },
+//     .specular = {
+//         .x = 0.9,
+//         .y = 0.9,
+//         .z = 0.9
+//     },
 
-    .shininess = 64.0,
-    .reflectivity = 0.30,
+//     .shininess = 64.0,
+//     .reflectivity = 0.30,
 
-    .diffuse_map = (size_t)-1,
-    .normal_map = (size_t)-1,
-    .splecular_map = (size_t)-1,
-};
-
-
-Material box_mat = {
-    .diffuse = {
-        .x = 0.95,
-        .y = 0.18,
-        .z = 0.04
-    },
-
-    .specular = {
-        .x = 0.5,
-        .y = 0.5,
-        .z = 0.5
-    },
-
-    .shininess = 32.0,
-    .reflectivity = 0.15,
-
-    .diffuse_map = (size_t)-1,
-    .normal_map = (size_t)-1,
-    .splecular_map = (size_t)-1,
-};
+//     .diffuse_map = (size_t)-1,
+//     .normal_map = (size_t)-1,
+//     .splecular_map = (size_t)-1,
+// };
 
 
-Material triangle_mat = {
-    .diffuse = {
-        .x = 0.05,
-        .y = 0.85,
-        .z = 0.20
-    },
+// Material box_mat = {
+//     .diffuse = {
+//         .x = 0.95,
+//         .y = 0.18,
+//         .z = 0.04
+//     },
 
-    .specular = {
-        .x = 0.7,
-        .y = 0.7,
-        .z = 0.7
-    },
+//     .specular = {
+//         .x = 0.5,
+//         .y = 0.5,
+//         .z = 0.5
+//     },
 
-    .shininess = 48.0,
-    .reflectivity = 0.20,
+//     .shininess = 32.0,
+//     .reflectivity = 0.15,
 
-    .diffuse_map = (size_t)-1,
-    .normal_map = (size_t)-1,
-    .splecular_map = (size_t)-1,
-};
+//     .diffuse_map = (size_t)-1,
+//     .normal_map = (size_t)-1,
+//     .splecular_map = (size_t)-1,
+// };
 
 
-Material ground_mat = {
-    .diffuse = {
-        .x = 0.55,
-        .y = 0.55,
-        .z = 0.55
-    },
+// Material triangle_mat = {
+//     .diffuse = {
+//         .x = 0.05,
+//         .y = 0.85,
+//         .z = 0.20
+//     },
 
-    .specular = {
-        .x = 0.1,
-        .y = 0.1,
-        .z = 0.1
-    },
+//     .specular = {
+//         .x = 0.7,
+//         .y = 0.7,
+//         .z = 0.7
+//     },
 
-    .shininess = 8.0,
-    .reflectivity = 0.20,
+//     .shininess = 48.0,
+//     .reflectivity = 0.20,
 
-    .diffuse_map = (size_t)-1,
-    .normal_map = (size_t)-1,
-    .splecular_map = (size_t)-1,
-};
+//     .diffuse_map = (size_t)-1,
+//     .normal_map = (size_t)-1,
+//     .splecular_map = (size_t)-1,
+// };
+
+
+// Material ground_mat = {
+//     .diffuse = {
+//         .x = 0.55,
+//         .y = 0.55,
+//         .z = 0.55
+//     },
+
+//     .specular = {
+//         .x = 0.1,
+//         .y = 0.1,
+//         .z = 0.1
+//     },
+
+//     .shininess = 8.0,
+//     .reflectivity = 0.20,
+
+//     .diffuse_map = (size_t)-1,
+//     .normal_map = (size_t)-1,
+//     .splecular_map = (size_t)-1,
+// };
 
 
 #define WIDTH 1920
@@ -192,26 +192,40 @@ int create_import_scene(void) {
         .aa_samples = AA
     };
 
+    import_glTF(&scene, "./glTF/DamagedHelmet.gltf");
+    Mesh *mesh = (Mesh *)get_element(0, &scene.meshes);
+    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 3.14));
+
+    Vec pos = ((Mesh *)get_element(0, &scene.meshes))->position;
+
+    printf("vertex_count: %u\n", scene.vertex_info[0]);
+    printf("normal_count: %u\n", scene.vertex_info[2]);
+    printf("texcoord_count: %u\n", scene.vertex_info[4]);
+    printf("triangle_count: %u\n", scene.triangle_count);
+
+    printf("pos: %f, %f, %f\n", pos.x, pos.y, pos.z);
+
     Camera cam = create_look_at_camera(
-        vec(0.0, -20.0, 20.0),
-        vec(0.0, 0.0, 0.0),
+        v_add(pos, vec(0.0, -3.0, 0.0)),
+        pos,
         1.0472
     );
 
     scene.dir_light.dir = normalize(vec(-0.4, -0.7, 1.0));
 
-    size_t mesh_id = import_mesh(&scene, "./models/Castle/Castle OBJ.obj");
-    //size_t mesh_id = import_mesh(&scene, "./models/body.obj");
+    // size_t mesh_id = import_obj_mesh(&scene, "./models/Castle/Castle OBJ.obj");
+    // //size_t mesh_id = import_mesh(&scene, "./models/body.obj");
 
-    Mesh *mesh = get_element(mesh_id, &scene.meshes);
-    //scale_mesh(&scene, mesh, vec(2.0, 2.0, 2.0));
-    //rotate_mesh(&scene, mesh, vec(0.3, 0.1, 0.2));
-    apply_mesh_transform(mesh);
-    set_mesh_position(&scene, mesh, vec(
-        mesh->size.x * -0.5,
-        mesh->size.y * -0.5,
-        mesh->size.z * -0.5
-    ));
+    // // Mesh *mesh = get_element(mesh_id, &scene.meshes);
+    // // //scale_mesh(&scene, mesh, vec(2.0, 2.0, 2.0));
+    // // //rotate_mesh(&scene, mesh, vec(0.3, 0.1, 0.2));
+    // // apply_mesh_transform(mesh);
+    // // // set_mesh_position(&scene, mesh, vec(
+    // //     mesh->size.x * -0.5,
+    // //     mesh->size.y * -0.5,
+    // //     mesh->size.z * -0.5
+    // // ));
+
 
 
     clock_t end = clock();

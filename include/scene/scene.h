@@ -14,14 +14,9 @@ typedef struct Scene {
     DirectionalLight dir_light;
     Vec global_ambient;
     DynArray planes;
-    Vertex vertices;
     BuildingTriangle triangles;
-    uint32_t vertex_pos_count;
-    uint32_t vertex_normal_count;
-    uint32_t vertex_texcoord_count;
-    uint32_t vertex_pos_capacity;
-    uint32_t vertex_normal_capacity;
-    uint32_t vertex_texcoord_capacity;
+    uint32_t vertex_info[6]; // p_len, p_cap, n_len, n_cal, t_len, t_cap
+    float *vertex_data[3]; //p(x, y, z), n(x, y, z), t(u, v)
     uint32_t triangle_count;
     uint32_t triangle_capacity;
     DynArray meshes;
@@ -34,7 +29,8 @@ Scene create_scene();
 
 size_t add_plane(Scene *scene, Vec point, Vec normal, Material *material);
 
-size_t import_mesh(Scene *scene, char *file_name);
+size_t import_obj_mesh(Scene *scene, char *file_name);
+uint32_t import_glTF(Scene *scene, char *file_name);
 size_t get_material_id(char *s, DynArray *arr);
 size_t add_material(char *s, DynArray *arr, Scene *scene);
 

@@ -45,72 +45,89 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     if (hit.t < 0.0) {
         return vec(0.0, 0.0, 0.0);
     } else {
-        if (hit.material->diffuse_map != (size_t)-1) {
-            ptr = get_element(hit.material->diffuse_map, &scene->textures);
-            w = ((int *)ptr)[0];
-            h = ((int *)ptr)[1];
-            x = clampi((int)(hit.d_u * (w - 1)), 0, w - 1);
-            y = clampi((int)((1.0 - hit.d_v) * (h - 1)), 0, h - 1);
-            idx = (y * w + x) * 3 + 2 * sizeof(int);
-            c_base = vec(
-                ptr[idx] / 255.0,
-                ptr[idx + 1] / 255.0,
-                ptr[idx + 2] / 255.0
-            );
+        Texture *base_color_texture = (Texture *)get_element(hit.material->base_color_map, &scene->textures);
+        double u = hit.d_u - floor(hit.d_u);
+        double v = hit.d_v - floor(hit.d_v);
+        w = base_color_texture->w;
+        h = base_color_texture->h;
+        ptr = base_color_texture->ptr;
+        x = clampi((int)(u * (w - 1)), 0, w - 1);
+        y = clampi((int)(v * (h - 1)), 0, h - 1);
+        idx = (y * w + x) * 3;
+        c_base = vec(
+            ptr[idx] / 255.0,
+            ptr[idx + 1] / 255.0,
+            ptr[idx + 2] / 255.0
+        );
 
-            //billinear version if want to switch later on
-            // unsigned char *ptr = get_element(hit.material->diffuse_map, &scene->textures);
-            // int w = ((int *)ptr)[0];
-            // int h = ((int *)ptr)[1];
+        c_base = hadamard(c_base, hit.material->base_color_factor);
+        // if (0 /*hit.material->diffuse_map != (size_t)-1*/) {
+        //     //closest neighbour
+        //     // ptr = get_element(hit.material->diffuse_map, &scene->textures);
+        //     // w = ((int *)ptr)[0];
+        //     // h = ((int *)ptr)[1];
+        //     // x = clampi((int)(hit.d_u * (w - 1)), 0, w - 1);
+        //     // y = clampi((int)((1.0 - hit.d_v) * (h - 1)), 0, h - 1);
+        //     // idx = (y * w + x) * 3 + 2 * sizeof(int);
+        //     // c_base = vec(
+        //     //     ptr[idx] / 255.0,
+        //     //     ptr[idx + 1] / 255.0,
+        //     //     ptr[idx + 2] / 255.0
+        //     // );
 
-            // float x = hit.d_u * (w - 1);
-            // float y = (1.0 - hit.d_v) * (h - 1);
+        //     //billinear version if want to switch later on
+        //     // unsigned char *ptr = get_element(hit.material->diffuse_map, &scene->textures);
+        //     // int w = ((int *)ptr)[0];
+        //     // int h = ((int *)ptr)[1];
 
-            // int x0 = floorf(x);
-            // int y0 = floorf(y);
+        //     // float x = hit.d_u * (w - 1);
+        //     // float y = (1.0 - hit.d_v) * (h - 1);
 
-            // int x1 = x0 + 1 < w ? x0 + 1 : x0;
-            // int y1 = y0 + 1 < h ? y0 + 1 : y0;
+        //     // int x0 = floorf(x);
+        //     // int y0 = floorf(y);
 
-            // float fx = x - x0;
-            // float fy = y - y0;
+        //     // int x1 = x0 + 1 < w ? x0 + 1 : x0;
+        //     // int y1 = y0 + 1 < h ? y0 + 1 : y0;
 
-            // int bottom_a_idx = (y0 * w + x0) * 3 + 2 * sizeof(int);
-            // int bottom_b_idx = (y0 * w + x1) * 3 + 2 * sizeof(int);
-            // int top_a_idx = (y1 * w + x0) * 3 + 2 * sizeof(int);
-            // int top_b_idx = (y1 * w + x1) * 3 + 2 * sizeof(int);
+        //     // float fx = x - x0;
+        //     // float fy = y - y0;
 
-            // Vec c_bottom_a = vec(
-            //     ptr[bottom_a_idx] / 255.0,
-            //     ptr[bottom_a_idx + 1] / 255.0,
-            //     ptr[bottom_a_idx + 2] / 255.0
-            // );
+        //     // int bottom_a_idx = (y0 * w + x0) * 3 + 2 * sizeof(int);
+        //     // int bottom_b_idx = (y0 * w + x1) * 3 + 2 * sizeof(int);
+        //     // int top_a_idx = (y1 * w + x0) * 3 + 2 * sizeof(int);
+        //     // int top_b_idx = (y1 * w + x1) * 3 + 2 * sizeof(int);
 
-            // Vec c_bottom_b = vec(
-            //     ptr[bottom_b_idx] / 255.0,
-            //     ptr[bottom_b_idx + 1] / 255.0,
-            //     ptr[bottom_b_idx + 2] / 255.0
-            // );
+        //     // Vec c_bottom_a = vec(
+        //     //     ptr[bottom_a_idx] / 255.0,
+        //     //     ptr[bottom_a_idx + 1] / 255.0,
+        //     //     ptr[bottom_a_idx + 2] / 255.0
+        //     // );
 
-            // Vec c_top_a = vec(
-            //     ptr[top_a_idx] / 255.0,
-            //     ptr[top_a_idx + 1] / 255.0,
-            //     ptr[top_a_idx + 2] / 255.0
-            // );
+        //     // Vec c_bottom_b = vec(
+        //     //     ptr[bottom_b_idx] / 255.0,
+        //     //     ptr[bottom_b_idx + 1] / 255.0,
+        //     //     ptr[bottom_b_idx + 2] / 255.0
+        //     // );
 
-            // Vec c_top_b = vec(
-            //     ptr[top_b_idx] / 255.0,
-            //     ptr[top_b_idx + 1] / 255.0,
-            //     ptr[top_b_idx + 2] / 255.0
-            // );
+        //     // Vec c_top_a = vec(
+        //     //     ptr[top_a_idx] / 255.0,
+        //     //     ptr[top_a_idx + 1] / 255.0,
+        //     //     ptr[top_a_idx + 2] / 255.0
+        //     // );
 
-            // Vec c_bottom = v_add(scale(c_bottom_a, 1 - fx), scale(c_bottom_b, fx));
-            // Vec c_top = v_add(scale(c_top_a, 1 - fx), scale(c_top_b, fx));
+        //     // Vec c_top_b = vec(
+        //     //     ptr[top_b_idx] / 255.0,
+        //     //     ptr[top_b_idx + 1] / 255.0,
+        //     //     ptr[top_b_idx + 2] / 255.0
+        //     // );
 
-            // c_base = v_add(scale(c_top, 1 - fy), scale(c_bottom, fy));
-        } else {
-            c_base = hit.material->diffuse;
-        }
+        //     // Vec c_bottom = v_add(scale(c_bottom_a, 1 - fx), scale(c_bottom_b, fx));
+        //     // Vec c_top = v_add(scale(c_top_a, 1 - fx), scale(c_top_b, fx));
+
+        //     // c_base = v_add(scale(c_top, 1 - fy), scale(c_bottom, fy));
+        // } else {
+        //     c_base = hit.material->base_color_factor;
+        // }
         shadow_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), scene->dir_light.dir);
         
         intensity = fabs(dot(hit.ns, scene->dir_light.dir));
@@ -130,30 +147,32 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
                 intensity
             );
 
-            c_specular = 
-            scale(
-                hadamard(
-                    scene->dir_light.scaled_color,
-                    hit.material->specular
-                ), 
-                pow(
-                    fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), light_reflection)), 
-                    hit.material->shininess
-                )
-            );
+            c_specular = vec(0.0, 0.0, 0.0);
+            // scale(
+            //     hadamard(
+            //         scene->dir_light.scaled_color,
+            //         hit.material->specular
+            //     ), 
+            //     pow(
+            //         fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), light_reflection)), 
+            //         hit.material->shininess
+            //     )
+            // );
         }
 
         c_ambient = hadamard(scene->global_ambient, c_base);
 
         c_local = v_add(v_add(c_ambient, c_diffuse), c_specular);
 
-        if (hit.material->reflectivity == 0.0 || depth == 0) return c_local;
+        return c_local;
 
-        ray_reflection = normalize(v_sub(ray->v, scale(hit.ng, 2 * dot(hit.ng, ray->v))));
-        reflection_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), ray_reflection);
-        c_reflected = trace_ray(&reflection_ray, scene, cam, bvh, depth - 1);
+        // if (hit.material->reflectivity == 0.0 || depth == 0) return c_local;
 
-        c = v_add(scale(c_local, 1.0 - hit.material->reflectivity), scale(c_reflected, hit.material->reflectivity));
+        // ray_reflection = normalize(v_sub(ray->v, scale(hit.ng, 2 * dot(hit.ng, ray->v))));
+        // reflection_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), ray_reflection);
+        // c_reflected = trace_ray(&reflection_ray, scene, cam, bvh, depth - 1);
+
+        // c = v_add(scale(c_local, 1.0 - hit.material->reflectivity), scale(c_reflected, hit.material->reflectivity));
 
         return c;
     }

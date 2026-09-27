@@ -94,7 +94,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials) {
     if (best_idx == -1) 
         return (HitResult){.t = -1.0};
     else
-        return triangle_result(t_min, u, v, best_idx, ray, &bvh->runtime_triangles, &bvh->building_triangles, bvh->vertices, materials);
+        return triangle_result(t_min, u, v, best_idx, ray, &bvh->runtime_triangles, &bvh->building_triangles, bvh->vertex_data, materials);
 }
 
 int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {

@@ -36,3 +36,13 @@ size_t grow_n_dyn_array(DynArray *arr, size_t n) {
 void *get_element(size_t i, DynArray *arr) {
     return (char *)arr->ptr + i * arr->size;
 }
+
+void delete_array(DynArray *arr, int free_elemets) {
+    if (free_elemets) {
+        for (size_t i = 0; i < arr->count; i++) {
+            free(*(void **)get_element(i, arr));
+        }
+    }
+
+    free(arr->ptr);
+}

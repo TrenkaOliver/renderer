@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -Iinclude -MMD -MP -g -O3 -mavx2 -mfma -flto=16 -ffast-math -fno-omit-frame-pointer
+CFLAGS = -Wall -Wextra -Iinclude -Ithird_party/json -Ithird_party/image -MMD -MP -g -O3 -mavx2 -mfma -flto=16 -ffast-math -fno-omit-frame-pointer
 
 LDLIBS = -lm
 
@@ -19,14 +19,15 @@ SRC = \
 	src/geometry/plane.c \
 	src/geometry/sphere.c \
 	src/geometry/triangle.c \
-	src/image/image.c \
 	src/light/material.c \
 	src/math/vec.c \
 	src/math/ray.c \
 	src/render/pixel.c \
 	src/render/render.c \
 	src/render/trace.c \
-	src/scene/scene.c
+	src/scene/scene.c \
+	third_party/image/stb_image.c \
+	third_party/json/yyjson.c
 
 OBJ = $(addprefix build/,$(SRC:.c=.o))
 DEP = $(OBJ:.o=.d)

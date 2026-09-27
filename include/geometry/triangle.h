@@ -21,31 +21,37 @@ typedef struct Triangle {
     Vec tc;
 } Triangle;
 
-typedef struct Vertex {
-    float *x;
-    float *y;
-    float *z;
+// typedef struct Vertex {
+//     // float *x;
+//     // float *y;
+//     // float *z;
     
-    float *nx;
-    float *ny;
-    float *nz;
+//     // float *nx;
+//     // float *ny;
+//     // float *nz;
 
-    float *u;
-    float *v;
-} Vertex;
+//     // float *u;
+//     // float *v;
+
+//     float
+// } Vertex;
 
 typedef struct BuildingTriangle {
+    // uint32_t *ai;
+    // uint32_t *bi;
+    // uint32_t *ci;
+
+    // uint32_t *nai;
+    // uint32_t *nbi;
+    // uint32_t *nci;
+
+    // uint32_t *tai;
+    // uint32_t *tbi;
+    // uint32_t *tci;
+
     uint32_t *ai;
     uint32_t *bi;
     uint32_t *ci;
-
-    uint32_t *nai;
-    uint32_t *nbi;
-    uint32_t *nci;
-
-    uint32_t *tai;
-    uint32_t *tbi;
-    uint32_t *tci;
 
     float *nx;
     float *ny;

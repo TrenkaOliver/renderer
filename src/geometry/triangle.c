@@ -98,27 +98,27 @@ double triangle_ray_intersection(Object *object, Ray *ray, Info *info) {
 
 
 HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
-    Vec p, ns;
-    double d_u, d_v;
+    // Vec p, ns;
+    // double d_u, d_v;
 
-    p = v_add(ray->o, scale(ray->v, t));
+    // p = v_add(ray->o, scale(ray->v, t));
     
-    ns = object->type.triangle.const_normal
-    ? object->type.triangle.ng 
-    : normalize(v_add(v_add(scale(object->type.triangle.na, info->w), scale(object->type.triangle.nb, info->u)), scale(object->type.triangle.nc, info->v)));
+    // ns = object->type.triangle.const_normal
+    // ? object->type.triangle.ng 
+    // : normalize(v_add(v_add(scale(object->type.triangle.na, info->w), scale(object->type.triangle.nb, info->u)), scale(object->type.triangle.nc, info->v)));
 
-    if (object->material->diffuse_map != (size_t)-1) {
-        d_u = object->type.triangle.ta.x * info->w + object->type.triangle.tb.x * info->u + object->type.triangle.tc.x * info->v;
-        d_v = object->type.triangle.ta.y * info->w + object->type.triangle.tb.y * info->u + object->type.triangle.tc.y * info->v;
-    } else {
-        d_u = NAN;
-        d_v = NAN;
-    }
+    // if (object->material->diffuse_map != (size_t)-1) {
+    //     d_u = object->type.triangle.ta.x * info->w + object->type.triangle.tb.x * info->u + object->type.triangle.tc.x * info->v;
+    //     d_v = object->type.triangle.ta.y * info->w + object->type.triangle.tb.y * info->u + object->type.triangle.tc.y * info->v;
+    // } else {
+    //     d_u = NAN;
+    //     d_v = NAN;
+    // }
     
-    return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
+    // return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
 }
 
-HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, Vertex *vertices, DynArray *materials) {
+HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, float **vertex_data, DynArray *materials) {
     Vec p = v_add(ray->o, scale(ray->v, t));
 
     uint32_t i = runtime_triangles->building_idx[idx];
@@ -134,39 +134,62 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
 
     Vec ns;
 
-    if (building_triangles->nai[i] == (uint32_t)-1) {
-        ns = ng;
-    } else {
-        Vec na = {
-            .x = vertices->nx[building_triangles->nai[i]],
-            .y = vertices->ny[building_triangles->nai[i]],
-            .z = vertices->nz[building_triangles->nai[i]]
-        };
+    Vec na = vec(
+        vertex_data[1][3 * building_triangles->ai[i] + 0],
+        vertex_data[1][3 * building_triangles->ai[i] + 1],
+        vertex_data[1][3 * building_triangles->ai[i] + 2]
+    );
 
-        Vec nb = {
-            .x = vertices->nx[building_triangles->nbi[i]],
-            .y = vertices->ny[building_triangles->nbi[i]],
-            .z = vertices->nz[building_triangles->nbi[i]]
-        };
+    Vec nb = vec(
+        vertex_data[1][3 * building_triangles->bi[i] + 0],
+        vertex_data[1][3 * building_triangles->bi[i] + 1],
+        vertex_data[1][3 * building_triangles->bi[i] + 2]
+    );
 
-        Vec nc = {
-            .x = vertices->nx[building_triangles->nci[i]],
-            .y = vertices->ny[building_triangles->nci[i]],
-            .z = vertices->nz[building_triangles->nci[i]]
-        };
+    Vec nc = vec(
+        vertex_data[1][3 * building_triangles->ci[i] + 0],
+        vertex_data[1][3 * building_triangles->ci[i] + 1],
+        vertex_data[1][3 * building_triangles->ci[i] + 2]
+    );
 
-        ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
-    }
+    ns = ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
+
+    // if (building_triangles->nai[i] == (uint32_t)-1) {
+    //     ns = ng;
+    // } else {
+    //     Vec na = {
+    //         .x = vertices->nx[building_triangles->nai[i]],
+    //         .y = vertices->ny[building_triangles->nai[i]],
+    //         .z = vertices->nz[building_triangles->nai[i]]
+    //     };
+
+    //     Vec nb = {
+    //         .x = vertices->nx[building_triangles->nbi[i]],
+    //         .y = vertices->ny[building_triangles->nbi[i]],
+    //         .z = vertices->nz[building_triangles->nbi[i]]
+    //     };
+
+    //     Vec nc = {
+    //         .x = vertices->nx[building_triangles->nci[i]],
+    //         .y = vertices->ny[building_triangles->nci[i]],
+    //         .z = vertices->nz[building_triangles->nci[i]]
+    //     };
+
+    //     ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
+    // }
 
     double d_u, d_v;
 
-    if (building_triangles->tai[i] == (uint32_t)-1) {
-        d_u = NAN;
-        d_v = NAN;
-    } else {
-        d_u = vertices->u[building_triangles->tai[i]] * w + vertices->u[building_triangles->tbi[i]] * u + vertices->u[building_triangles->tci[i]] * v;
-        d_v = vertices->v[building_triangles->tai[i]] * w + vertices->v[building_triangles->tbi[i]] * u + vertices->v[building_triangles->tci[i]] * v;
-    }
+    d_u = vertex_data[2][2 * building_triangles->ai[i] + 0] * w + vertex_data[2][2 * building_triangles->bi[i] + 0] * u + vertex_data[2][2 * building_triangles->ci[i] + 0] * v;
+    d_v = vertex_data[2][2 * building_triangles->ai[i] + 1] * w + vertex_data[2][2 * building_triangles->bi[i] + 1] * u + vertex_data[2][2 * building_triangles->ci[i] + 1] * v;
+
+    // if (building_triangles->tai[i] == (uint32_t)-1) {
+    //     d_u = NAN;
+    //     d_v = NAN;
+    // } else {
+    //     d_u = vertices->u[building_triangles->tai[i]] * w + vertices->u[building_triangles->tbi[i]] * u + vertices->u[building_triangles->tci[i]] * v;
+    //     d_v = vertices->v[building_triangles->tai[i]] * w + vertices->v[building_triangles->tbi[i]] * u + vertices->v[building_triangles->tci[i]] * v;
+    // }
     
 
     // if (building_triangles->nai[i] == (uint32_t)-1) {

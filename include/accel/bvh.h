@@ -28,12 +28,12 @@ typedef struct BVH8Node {
 
 typedef struct BVH8Tree {
     BVH8Node *nodes;
-    Vertex *vertices;
+    float **vertex_data;
     BuildingTriangle building_triangles;
     RuntimeTriangle runtime_triangles;
 } BVH8Tree;
 
 BVH create_bvh(BuildingTriangle *triangles, size_t count);
-BVH8Tree create_bvh8_tree(BuildingTriangle *triangles, Vertex *vertices, size_t count);
+BVH8Tree create_bvh8_tree(BuildingTriangle *triangles, float **vertex_data, size_t count);
 
 #endif
