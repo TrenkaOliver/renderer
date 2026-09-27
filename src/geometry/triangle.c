@@ -206,7 +206,63 @@ HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, Run
     // if (building_triangles->nbi[i] == (size_t)-1) printf("nbi none\n");
     // if (building_triangles->nci[i] == (size_t)-1) printf("nci none\n");
 
+    Vec a = vec(
+        vertex_data[0][3 * building_triangles->ai[i] + 0],
+        vertex_data[0][3 * building_triangles->ai[i] + 1],
+        vertex_data[0][3 * building_triangles->ai[i] + 2]
+    );
 
+    Vec b = vec(
+        vertex_data[0][3 * building_triangles->bi[i] + 0],
+        vertex_data[0][3 * building_triangles->bi[i] + 1],
+        vertex_data[0][3 * building_triangles->bi[i] + 2]
+    );
 
-    return (HitResult){.point = p, .ng = ng, .ns = ns, .t = t, .material = m, .d_u = d_u, .d_v = d_v};
+    Vec c = vec(
+        vertex_data[0][3 * building_triangles->ci[i] + 0],
+        vertex_data[0][3 * building_triangles->ci[i] + 1],
+        vertex_data[0][3 * building_triangles->ci[i] + 2]
+    );
+
+    Vec ab = v_sub(b, a);
+    Vec ac = v_sub(c, a);
+    
+    float uv_ab[2] = {
+        vertex_data[2][2 * building_triangles->bi[i] + 0] - vertex_data[2][2 * building_triangles->ai[i] + 0],
+        vertex_data[2][2 * building_triangles->bi[i] + 1] - vertex_data[2][2 * building_triangles->ai[i] + 1],
+    };
+
+    float uv_ac[2] = {
+        vertex_data[2][2 * building_triangles->ci[i] + 0] - vertex_data[2][2 * building_triangles->ai[i] + 0],
+        vertex_data[2][2 * building_triangles->ci[i] + 1] - vertex_data[2][2 * building_triangles->ai[i] + 1],
+    };
+
+    float D = uv_ab[0] * uv_ac[1] - uv_ab[1] * uv_ac[0];
+
+    Vec tangent, bitangent;
+
+    int valid_tangent = fabsf(D) > EPSILON;
+
+    if (valid_tangent) {
+        tangent = scale(
+            v_sub(
+                scale(ab, uv_ac[1]),
+                scale(ac, uv_ab[1])
+            ),
+            1.0f / D
+        );
+
+        bitangent = scale(
+            v_sub(
+                scale(ac, uv_ab[0]),
+                scale(ab, uv_ac[0])
+            ),
+            1.0f / D
+        );
+    } else {
+        tangent = vec(0.0, 0.0, 0.0);
+        bitangent = vec(0.0, 0.0, 0.0);
+    }
+
+    return (HitResult){.point = p, .ng = ng, .ns = ns, .tangent = tangent, .bitangent = bitangent, .valid_tangent = valid_tangent, .t = t, .material = m, .d_u = d_u, .d_v = d_v};
 }

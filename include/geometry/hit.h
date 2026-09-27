@@ -9,6 +9,9 @@ typedef struct HitResult {
     Vec point;
     Vec ng;
     Vec ns;
+    Vec tangent;
+    Vec bitangent;
+    int valid_tangent;
     double t;
     Material *material;
     double d_u;

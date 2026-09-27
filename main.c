@@ -211,7 +211,7 @@ int create_import_scene(void) {
         1.0472
     );
 
-    scene.dir_light.dir = normalize(vec(-0.4, -0.7, 1.0));
+    scene.dir_light.dir = normalize(vec(-0.4, 0.7, -0.5));
 
     // size_t mesh_id = import_obj_mesh(&scene, "./models/Castle/Castle OBJ.obj");
     // //size_t mesh_id = import_mesh(&scene, "./models/body.obj");

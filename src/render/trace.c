@@ -43,11 +43,12 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     hit = get_first_hit(ray, scene, bvh);
 
     if (hit.t < 0.0) {
-        return vec(0.0, 0.0, 0.0);
+        return vec(0.3, 0.3, 0.3);
     } else {
-        Texture *base_color_texture = (Texture *)get_element(hit.material->base_color_map, &scene->textures);
         double u = hit.d_u - floor(hit.d_u);
         double v = hit.d_v - floor(hit.d_v);
+
+        Texture *base_color_texture = (Texture *)get_element(hit.material->base_color_map, &scene->textures);
         w = base_color_texture->w;
         h = base_color_texture->h;
         ptr = base_color_texture->ptr;
@@ -55,110 +56,68 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
         y = clampi((int)(v * (h - 1)), 0, h - 1);
         idx = (y * w + x) * 3;
         c_base = vec(
-            ptr[idx] / 255.0,
+            ptr[idx + 0] / 255.0,
             ptr[idx + 1] / 255.0,
             ptr[idx + 2] / 255.0
         );
-
         c_base = hadamard(c_base, hit.material->base_color_factor);
-        // if (0 /*hit.material->diffuse_map != (size_t)-1*/) {
-        //     //closest neighbour
-        //     // ptr = get_element(hit.material->diffuse_map, &scene->textures);
-        //     // w = ((int *)ptr)[0];
-        //     // h = ((int *)ptr)[1];
-        //     // x = clampi((int)(hit.d_u * (w - 1)), 0, w - 1);
-        //     // y = clampi((int)((1.0 - hit.d_v) * (h - 1)), 0, h - 1);
-        //     // idx = (y * w + x) * 3 + 2 * sizeof(int);
-        //     // c_base = vec(
-        //     //     ptr[idx] / 255.0,
-        //     //     ptr[idx + 1] / 255.0,
-        //     //     ptr[idx + 2] / 255.0
-        //     // );
 
-        //     //billinear version if want to switch later on
-        //     // unsigned char *ptr = get_element(hit.material->diffuse_map, &scene->textures);
-        //     // int w = ((int *)ptr)[0];
-        //     // int h = ((int *)ptr)[1];
+        Texture *normal_map = (Texture *)get_element(hit.material->normal_map, &scene->textures);
+        w = normal_map->w;
+        h = normal_map->h;
+        ptr = normal_map->ptr;
+        x = clampi((int)(u * (w - 1)), 0, w - 1);
+        y = clampi((int)(v * (h - 1)), 0, h - 1);
+        idx = (y * w + x) * 3;
 
-        //     // float x = hit.d_u * (w - 1);
-        //     // float y = (1.0 - hit.d_v) * (h - 1);
+        Vec nmap = vec(
+            ptr[idx + 0] / 255.0 * 2 - 1.0f,
+            ptr[idx + 1] / 255.0 * 2 - 1.0f,
+            ptr[idx + 2] / 255.0 * 2 - 1.0f
+        );
+        nmap.x *= hit.material->normal_scale;
+        nmap.y *= hit.material->normal_scale;
 
-        //     // int x0 = floorf(x);
-        //     // int y0 = floorf(y);
+        Vec ns;
+        if (hit.valid_tangent) {
+            ns = normalize(
+                v_add(
+                    v_add(
+                        scale(hit.tangent, nmap.x),
+                        scale(hit.bitangent, nmap.y)
+                    ),
+                    scale(hit.ns, nmap.z)
+                )
+            );
+        } else {
+            ns = hit.ns;
+        }
 
-        //     // int x1 = x0 + 1 < w ? x0 + 1 : x0;
-        //     // int y1 = y0 + 1 < h ? y0 + 1 : y0;
-
-        //     // float fx = x - x0;
-        //     // float fy = y - y0;
-
-        //     // int bottom_a_idx = (y0 * w + x0) * 3 + 2 * sizeof(int);
-        //     // int bottom_b_idx = (y0 * w + x1) * 3 + 2 * sizeof(int);
-        //     // int top_a_idx = (y1 * w + x0) * 3 + 2 * sizeof(int);
-        //     // int top_b_idx = (y1 * w + x1) * 3 + 2 * sizeof(int);
-
-        //     // Vec c_bottom_a = vec(
-        //     //     ptr[bottom_a_idx] / 255.0,
-        //     //     ptr[bottom_a_idx + 1] / 255.0,
-        //     //     ptr[bottom_a_idx + 2] / 255.0
-        //     // );
-
-        //     // Vec c_bottom_b = vec(
-        //     //     ptr[bottom_b_idx] / 255.0,
-        //     //     ptr[bottom_b_idx + 1] / 255.0,
-        //     //     ptr[bottom_b_idx + 2] / 255.0
-        //     // );
-
-        //     // Vec c_top_a = vec(
-        //     //     ptr[top_a_idx] / 255.0,
-        //     //     ptr[top_a_idx + 1] / 255.0,
-        //     //     ptr[top_a_idx + 2] / 255.0
-        //     // );
-
-        //     // Vec c_top_b = vec(
-        //     //     ptr[top_b_idx] / 255.0,
-        //     //     ptr[top_b_idx + 1] / 255.0,
-        //     //     ptr[top_b_idx + 2] / 255.0
-        //     // );
-
-        //     // Vec c_bottom = v_add(scale(c_bottom_a, 1 - fx), scale(c_bottom_b, fx));
-        //     // Vec c_top = v_add(scale(c_top_a, 1 - fx), scale(c_top_b, fx));
-
-        //     // c_base = v_add(scale(c_top, 1 - fy), scale(c_bottom, fy));
-        // } else {
-        //     c_base = hit.material->base_color_factor;
-        // }
         shadow_ray = create_ray(v_add(hit.point, scale(hit.ng, EPSILON)), scene->dir_light.dir);
         
-        intensity = fabs(dot(hit.ns, scene->dir_light.dir));
-        light_reflection = normalize(v_sub(scene->dir_light.dir, scale(hit.ns, 2.0 * dot(hit.ns, scene->dir_light.dir))));
+        intensity = fmax(0.0, dot(ns, scene->dir_light.dir));
+        light_reflection = normalize(v_sub(scene->dir_light.dir, scale(ns, 2.0 * dot(ns, scene->dir_light.dir))));
+        
+        c_diffuse = 
+        scale(
+            hadamard(
+                scene->dir_light.scaled_color, 
+                c_base
+            ),
+            intensity
+        );
 
-        if (is_shaded(&shadow_ray, scene, bvh) || intensity < 0.0) {
-            c_diffuse = vec(0.0, 0.0, 0.0);
-            c_specular = vec(0.0, 0.0, 0.0);
-        }
-        else {
-            c_diffuse = 
-            scale(
-                hadamard(
-                    scene->dir_light.scaled_color, 
-                    c_base
-                ),
-                intensity
-            );
-
-            c_specular = vec(0.0, 0.0, 0.0);
-            // scale(
-            //     hadamard(
-            //         scene->dir_light.scaled_color,
-            //         hit.material->specular
-            //     ), 
-            //     pow(
-            //         fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), light_reflection)), 
-            //         hit.material->shininess
-            //     )
-            // );
-        }
+        c_specular = vec(0.0, 0.0, 0.0);
+        // scale(
+        //     hadamard(
+        //         scene->dir_light.scaled_color,
+        //         hit.material->specular
+        //     ), 
+        //     pow(
+        //         fmax(0.0, dot(normalize(v_sub(cam->position, hit.point)), light_reflection)), 
+        //         hit.material->shininess
+        //     )
+        // );
 
         c_ambient = hadamard(scene->global_ambient, c_base);
 
