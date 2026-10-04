@@ -7,6 +7,7 @@
 #include "light/light.h"
 #include "light/material.h"
 #include "render/trace.h"
+#include "stb_image.h"
 
 Vec RIGHT = {.x = 1.0, .y = 0.0, .z = 0.0};
 Vec FORWARD = {.x = 0.0, .y = 1.0, .z = 0.0};
@@ -86,6 +87,20 @@ size_t add_plane(Scene *scene, Vec o, Vec n, Material *m) {
     };
 
     return i;
+}
+
+uint32_t import_env(Scene *scene, char *file_name) {
+    int w, h;
+    
+    char *ptr = (char *)stbi_loadf(file_name, &w, &h, NULL, 3);
+
+    if (!ptr) return 0;
+
+    scene->env.w = (uint32_t)w;
+    scene->env.h = (uint32_t)h;
+    scene->env.ptr = ptr;
+
+    return 1;
 }
 
 

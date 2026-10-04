@@ -4,7 +4,7 @@
 
 #include "geometry/object.h"
 
-#define EPSILON 1e-8
+#define EPSILON 1e-4
 
 __m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info) {
     ps_Vec a = (ps_Vec){

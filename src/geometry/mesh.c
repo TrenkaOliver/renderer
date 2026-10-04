@@ -449,10 +449,12 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
         mesh->first_triangle = first_triangle;
         mesh->first_vertex_pos = first_vertex;
         mesh->first_vertex_normal = first_vertex;
+        mesh->first_vertex_texcoord = first_vertex;
 
         mesh->triangle_count = scene->triangle_count - mesh->first_triangle;
         mesh->vertex_pos_count = scene->vertex_info[0] - first_vertex;
-        mesh->vertex_pos_count = scene->vertex_info[0] - first_vertex;
+        mesh->vertex_normal_count = scene->vertex_info[0] - first_vertex;
+        mesh->vertex_texcoord_count = scene->vertex_info[0] - first_vertex;
     
         mesh->position = vec(
             (mesh->aabb.min[0] + mesh->aabb.max[0]) * 0.5f,

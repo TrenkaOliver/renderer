@@ -195,8 +195,9 @@ int create_import_scene(void) {
 
     //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
+    import_env(&scene, "./glTF/env/small_hangar_01_1k.hdr");
     Mesh *mesh = (Mesh *)get_element(0, &scene.meshes);
-    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 2.0));
+    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 2.14));
     
     Vec pos = ((Mesh *)get_element(0, &scene.meshes))->position;
     

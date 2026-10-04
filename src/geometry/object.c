@@ -64,7 +64,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials) {
             _mm256_storeu_ps(v_values, info.v);
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
-                if (t_values[lane] >= 0.0f && t_values[lane] < t_min) {
+                if (t_values[lane] >= EPSILON && t_values[lane] < t_min) {
                     t_min = t_values[lane];
                     u = u_values[lane];
                     v = v_values[lane];

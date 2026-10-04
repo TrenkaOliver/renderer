@@ -11,6 +11,4 @@ typedef struct DirectionalLight {
     double intensity;
 } DirectionalLight;
 
-
-
 #endif
