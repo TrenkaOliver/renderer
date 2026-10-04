@@ -332,11 +332,14 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
         Mesh *mesh = get_element(grow_dyn_array(&scene->meshes), &scene->meshes);
         mesh->aabb = (AABB) {
             .min = {FLT_MAX, FLT_MAX, FLT_MAX},
-            .max = {FLT_MIN, FLT_MIN, FLT_MIN}
+            .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
         };        
 
         yyjson_val *primitives = yyjson_obj_get(item, "primitives");
         ssize_t primitve_array_count = yyjson_arr_size(primitives);
+
+        uint32_t first_vertex = scene->vertex_info[0];
+        uint32_t first_triangle = scene->triangle_count;
 
         for (size_t j = 0; j < primitve_array_count; j++) {
             yyjson_val *primitive = yyjson_arr_get(primitives, j);
@@ -349,7 +352,7 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
             for (int k = 0; k < 3; k++) {
                 __gltfAccessor *accessor = (__gltfAccessor *)get_element(yyjson_get_uint(yyjson_obj_get(attributes, titles[k])), &accessor_array);
                 if (scene->vertex_info[2 * k + 1] < scene->vertex_info[2 * k] + accessor->count) {
-                    scene->vertex_data[k] = realloc(scene->vertex_data[k], (scene->vertex_info[2 * k] + accessor->count) * accessor->stride);
+                    scene->vertex_data[k] = realloc(scene->vertex_data[k], (scene->vertex_info[2 * k] + accessor->count) * accessor->component_count * sizeof(float));
                     scene->vertex_info[2 * k + 1] = scene->vertex_info[2 * k] + accessor->count;
                 }
                 for (size_t l = 0; l < accessor->count * accessor->component_count; l++) {
@@ -433,30 +436,29 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
                 mesh->aabb = aabb_merge(mesh->aabb, aabb);
 
                 scene->triangles.aabb[scene->triangle_count + k] = aabb;
-
+                
                 scene->triangles.centroid[3 * (scene->triangle_count + k) + 0] = (aabb.min[0] + aabb.max[0]) * 0.5f;
                 scene->triangles.centroid[3 * (scene->triangle_count + k) + 1] = (aabb.min[1] + aabb.max[1]) * 0.5f;
                 scene->triangles.centroid[3 * (scene->triangle_count + k) + 2] = (aabb.min[2] + aabb.max[2]) * 0.5f;
-
+                
                 scene->triangles.material[scene->triangle_count + k] = yyjson_get_uint(yyjson_obj_get(primitive, "material"));
             }
 
-            mesh->first_triangle = scene->triangle_count;
-            mesh->first_vertex_pos = vertex_offset;
-            mesh->first_vertex_normal = vertex_offset;
-
             scene->triangle_count += index_accessor->count / 3;
-            mesh->triangle_count = scene->triangle_count - mesh->first_triangle;
-            mesh->vertex_pos_count = scene->vertex_info[0] - vertex_offset;
-            mesh->vertex_pos_count = scene->vertex_info[0] - vertex_offset;
-        
-            mesh->position = vec(
-                (mesh->aabb.min[0] + mesh->aabb.max[0]) * 0.5f,
-                (mesh->aabb.min[1] + mesh->aabb.max[1]) * 0.5f,
-                (mesh->aabb.min[2] + mesh->aabb.max[2]) * 0.5f
-            );
-
         }
+        mesh->first_triangle = first_triangle;
+        mesh->first_vertex_pos = first_vertex;
+        mesh->first_vertex_normal = first_vertex;
+
+        mesh->triangle_count = scene->triangle_count - mesh->first_triangle;
+        mesh->vertex_pos_count = scene->vertex_info[0] - first_vertex;
+        mesh->vertex_pos_count = scene->vertex_info[0] - first_vertex;
+    
+        mesh->position = vec(
+            (mesh->aabb.min[0] + mesh->aabb.max[0]) * 0.5f,
+            (mesh->aabb.min[1] + mesh->aabb.max[1]) * 0.5f,
+            (mesh->aabb.min[2] + mesh->aabb.max[2]) * 0.5f
+        );
     }
 
     yyjson_val *images = yyjson_obj_get(root, "images");
@@ -526,6 +528,49 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
             material.metallic_roughness_map = (uint32_t)-1;
         }
 
+        yyjson_val *occlusion_map = yyjson_obj_get(mat, "occlusionTexture");
+
+        material.occlusion_strength = 1.0;
+
+        if (occlusion_map) {
+            uint32_t index = yyjson_get_uint(yyjson_obj_get(occlusion_map, "index"));
+            material.occlusion_map = yyjson_get_uint(yyjson_obj_get(yyjson_arr_get(textures, index), "source"));
+
+            yyjson_val *strength = yyjson_obj_get(occlusion_map, "strength");
+            if (strength) material.occlusion_strength = yyjson_get_real(strength);
+        } else {
+            material.occlusion_map = (uint32_t)-1;
+        }
+
+        yyjson_val *emissive_map = yyjson_obj_get(mat, "emissiveTexture");
+        if (emissive_map) {
+            uint32_t index = yyjson_get_uint(yyjson_obj_get(emissive_map, "index"));
+            material.emissive_map = yyjson_get_uint(yyjson_obj_get(yyjson_arr_get(textures, index), "source"));
+        } else {
+            material.emissive_map = (uint32_t)-1;
+        }
+
+        yyjson_val *emissive_factor = yyjson_obj_get(pbr, "emissiveFactor");
+        if (emissive_factor) {
+            material.emissive_factor.x = yyjson_get_real(yyjson_arr_get(emissive_factor, 0));
+            material.emissive_factor.y = yyjson_get_real(yyjson_arr_get(emissive_factor, 1));
+            material.emissive_factor.z = yyjson_get_real(yyjson_arr_get(emissive_factor, 2));
+        } else {
+            material.emissive_factor = vec(1.0, 1.0, 1.0);
+        }        
+        
+        material.occlusion_strength = 1.0;
+
+        if (occlusion_map) {
+            uint32_t index = yyjson_get_uint(yyjson_obj_get(occlusion_map, "index"));
+            material.occlusion_map = yyjson_get_uint(yyjson_obj_get(yyjson_arr_get(textures, index), "source"));
+
+            yyjson_val *strength = yyjson_obj_get(occlusion_map, "strength");
+            if (strength) material.occlusion_strength = yyjson_get_real(strength);
+        } else {
+            material.occlusion_map = (uint32_t)-1;
+        }
+
         yyjson_val *normal_texture = yyjson_obj_get(mat, "normalTexture");
 
         material.normal_scale = 1.0f;
@@ -543,92 +588,92 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
         *((Material *)get_element(grow_dyn_array(&scene->materials), &scene->materials)) = material;
     }
 
-    // delete_array(&buffer_array, 1); //1 means free each element as well
-    // delete_array(&accessor_array, 0);
+    delete_array(&buffer_array, 1);
+    delete_array(&accessor_array, 0);
     yyjson_doc_free(doc);
 }
 
 void move_mesh(Scene *scene, Mesh *mesh, Vec delta) {
-    // size_t i, end;
-    // float delta_f[3] = {delta.x, delta.y, delta.z};
+    size_t i, end;
+    float delta_f[3] = {delta.x, delta.y, delta.z};
 
-    // mesh->position = v_add(mesh->position, delta);
+    mesh->position = v_add(mesh->position, delta);
 
-    // end = mesh->first_vertex_pos + mesh->vertex_pos_count;
+    end = mesh->first_vertex_pos + mesh->vertex_pos_count;
 
-    // for (i = mesh->first_vertex_pos; i < end; i++) {
-    //     scene->vertices.x[i] += delta_f[0];
-    //     scene->vertices.y[i] += delta_f[1];
-    //     scene->vertices.z[i] += delta_f[2];
-    // }
+    for (i = mesh->first_vertex_pos; i < end; i++) {
+        scene->vertex_data[0][3 * i + 0] += delta_f[0];
+        scene->vertex_data[0][3 * i + 1] += delta_f[1];
+        scene->vertex_data[0][3 * i + 2] += delta_f[2];
+    }
 
-    // end = mesh->first_triangle + mesh->triangle_count;
+    end = mesh->first_triangle + mesh->triangle_count;
 
-    // for (i = mesh->first_triangle; i < end; i++) {
-    //     vecf_add(delta_f, scene->triangles.aabb[i].min);
-    //     vecf_add(delta_f, scene->triangles.aabb[i].max);
-    // }
+    for (i = mesh->first_triangle; i < end; i++) {
+        vecf_add(delta_f, scene->triangles.aabb[i].min);
+        vecf_add(delta_f, scene->triangles.aabb[i].max);
+    }
 
-    // vecf_add(delta_f, mesh->aabb.min);
-    // vecf_add(delta_f, mesh->aabb.max);
+    vecf_add(delta_f, mesh->aabb.min);
+    vecf_add(delta_f, mesh->aabb.max);
 }
 
 void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
-    // Vec reciprocal_scaling = reciproc(scaling);
+    Vec reciprocal_scaling = reciproc(scaling);
 
-    // mesh->size = hadamard(mesh->size, scaling);
+    mesh->size = hadamard(mesh->size, scaling);
     
-    // mesh->aabb = (AABB){
-    //     .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
-    //     .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
-    // };
+    mesh->aabb = (AABB){
+        .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
+        .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
+    };
 
-    // uint32_t end;
+    uint32_t end;
     
-    // end = mesh->first_vertex_pos + mesh->vertex_pos_count;
-    // for (uint32_t i = mesh->first_vertex_pos; i < end; i++) {
-    //     float dx = scene->vertices.x[i] - mesh->position.x;
-    //     float dy = scene->vertices.y[i] - mesh->position.y;
-    //     float dz = scene->vertices.z[i] - mesh->position.z;
+    end = mesh->first_vertex_pos + mesh->vertex_pos_count;
+    for (uint32_t i = mesh->first_vertex_pos; i < end; i++) {
+        float dx = scene->vertex_data[0][3 * i + 0] - mesh->position.x;
+        float dy = scene->vertex_data[0][3 * i + 1] - mesh->position.y;
+        float dz = scene->vertex_data[0][3 * i + 2] - mesh->position.z;
 
-    //     scene->vertices.x[i] = mesh->position.x + dx * scaling.x;
-    //     scene->vertices.y[i] = mesh->position.y + dy * scaling.y;
-    //     scene->vertices.z[i] = mesh->position.z + dz * scaling.z;
-    // }
+        scene->vertex_data[0][3 * i + 0] = mesh->position.x + dx * scaling.x;
+        scene->vertex_data[0][3 * i + 1] = mesh->position.y + dy * scaling.y;
+        scene->vertex_data[0][3 * i + 2] = mesh->position.z + dz * scaling.z;
+    }
 
-    // end = mesh->first_vertex_normal + mesh->vertex_normal_count;
-    // for (uint32_t i = mesh->first_vertex_normal; i < end; i++) {
-    //     Vec n = vec(scene->vertices.nx[i], scene->vertices.ny[i], scene->vertices.nz[i]);
-    //     n = normalize(hadamard(n, reciprocal_scaling));
-    //     scene->vertices.nx[i] = n.x;
-    //     scene->vertices.ny[i] = n.y;
-    //     scene->vertices.nz[i] = n.z;
-    // }
+    end = mesh->first_vertex_normal + mesh->vertex_normal_count;
+    for (uint32_t i = mesh->first_vertex_normal; i < end; i++) {
+        Vec n = vec(scene->vertex_data[1][3 * i + 0], scene->vertex_data[1][3 * i + 1], scene->vertex_data[1][3 * i + 2]);
+        n = normalize(hadamard(n, reciprocal_scaling));
+        scene->vertex_data[1][3 * i + 0] = n.x;
+        scene->vertex_data[1][3 * i + 1] = n.y;
+        scene->vertex_data[1][3 * i + 2] = n.z;
+    }
 
-    // end = mesh->first_triangle + mesh->triangle_count;
-    // for (uint32_t i = mesh->first_triangle; i < end; i++) {
-    //     Vec n = vec(scene->triangles.nx[i], scene->triangles.ny[i], scene->triangles.nz[i]);
-    //     n = normalize(hadamard(n, reciprocal_scaling));
-    //     scene->triangles.nx[i] = n.x;
-    //     scene->triangles.ny[i] = n.y;
-    //     scene->triangles.nz[i] = n.z;
+    end = mesh->first_triangle + mesh->triangle_count;
+    for (uint32_t i = mesh->first_triangle; i < end; i++) {
+        Vec n = vec(scene->triangles.nx[i], scene->triangles.ny[i], scene->triangles.nz[i]);
+        n = normalize(hadamard(n, reciprocal_scaling));
+        scene->triangles.nx[i] = n.x;
+        scene->triangles.ny[i] = n.y;
+        scene->triangles.nz[i] = n.z;
 
-    //     float v_a[3] = {scene->vertices.x[scene->triangles.ai[i]], scene->vertices.y[scene->triangles.ai[i]], scene->vertices.z[scene->triangles.ai[i]]};
-    //     float v_b[3] = {scene->vertices.x[scene->triangles.bi[i]], scene->vertices.y[scene->triangles.bi[i]], scene->vertices.z[scene->triangles.bi[i]]};
-    //     float v_c[3] = {scene->vertices.x[scene->triangles.ci[i]], scene->vertices.y[scene->triangles.ci[i]], scene->vertices.z[scene->triangles.ci[i]]};
-    //     float min[3], max[3];
-    //     vecf_min3(v_a, v_b, min);
-    //     vecf_min3(min, v_c, min);
-    //     vecf_max3(v_a, v_b, max);
-    //     vecf_max3(max, v_c, max);
+        float v_a[3] = {scene->vertex_data[0][3 * scene->triangles.ai[i] + 0], scene->vertex_data[0][3 * scene->triangles.ai[i] + 1], scene->vertex_data[0][3 * scene->triangles.ai[i] + 2]};
+        float v_b[3] = {scene->vertex_data[0][3 * scene->triangles.bi[i] + 0], scene->vertex_data[0][3 * scene->triangles.bi[i] + 1], scene->vertex_data[0][3 * scene->triangles.bi[i] + 2]};
+        float v_c[3] = {scene->vertex_data[0][3 * scene->triangles.ci[i] + 0], scene->vertex_data[0][3 * scene->triangles.ci[i] + 1], scene->vertex_data[0][3 * scene->triangles.ci[i] + 2]};
+        float min[3], max[3];
+        vecf_min3(v_a, v_b, min);
+        vecf_min3(min, v_c, min);
+        vecf_max3(v_a, v_b, max);
+        vecf_max3(max, v_c, max);
 
-    //     scene->triangles.aabb[i] = (AABB) {
-    //         .min = {min[0], min[1], min[2]},
-    //         .max = {max[0], max[1], max[2]}
-    //     };
+        scene->triangles.aabb[i] = (AABB) {
+            .min = {min[0], min[1], min[2]},
+            .max = {max[0], max[1], max[2]}
+        };
 
-    //     mesh->aabb = aabb_merge(mesh->aabb, scene->triangles.aabb[i]);
-    // }
+        mesh->aabb = aabb_merge(mesh->aabb, scene->triangles.aabb[i]);
+    }
 }
 
 void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {

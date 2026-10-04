@@ -19,11 +19,15 @@ typedef struct Material {
     Vec base_color_factor;
     float metallic;
     float roughness;
+    Vec emissive_factor;
     float normal_scale;
+    float occlusion_strength;
 
     uint32_t base_color_map;
     uint32_t metallic_roughness_map;
+    uint32_t emissive_map;
     uint32_t normal_map;
+    uint32_t occlusion_map;
 } Material;
 
 typedef struct Texture {

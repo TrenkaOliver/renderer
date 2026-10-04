@@ -117,104 +117,99 @@ size_t add_plane(Scene *scene, Vec o, Vec n, Material *m) {
 // }
 
 size_t add_triangle(Scene *scene, Vec a, Vec b, Vec c, uint32_t m) {
-    // Object *ptr;
-    // size_t i;
+    scene->vertex_info[0] += 3;
+    scene->triangle_count += 1;
 
-    // i = grow_dyn_array(&scene->objects);
-    // ptr = get_element(i, &scene->objects);
+    if (scene->vertex_info[1] < scene->vertex_info[0]) {
+        scene->vertex_data[0] = realloc(scene->vertex_data[0], (scene->vertex_info[0]) * 12);
+        scene->vertex_info[1] = scene->vertex_info[0];
+    }
 
-    // *ptr = (Object) {
-    //     .type.triangle = {
-    //         .const_normal = 1,
-    //         .has_texture = 0,
-    //         .a = a,
-    //         .b = b,
-    //         .c = c,
-    //         .ng = normalize(cross(v_sub(b, a), v_sub(c, a)))
-    //     },
-    //     .aabb = {
-    //         .min = {fminf(fminf(a.x, b.x), c.x), fminf(fminf(a.y, b.y), c.y), fminf(fminf(a.z, b.z), c.z)},
-    //         .max = {fmaxf(fmaxf(a.x, b.x), c.x), fmaxf(fmaxf(a.y, b.y), c.y), fmaxf(fmaxf(a.z, b.z), c.z)}
-    //     },
-    //     .material = m,
-    //     .get_ray_intersection = triangle_ray_intersection,
-    //     .get_hit_result = get_triangle_result
-    // };
+    scene->vertex_info[2] += 3;
+    scene->triangle_count += 1;
 
-    //Vec centroid = calc_centroid(ptr->aabb);
-    // ptr->centroid[0] = centroid.x;
-    // ptr->centroid[1] = centroid.y;
-    // ptr->centroid[2] = centroid.z;
+    if (scene->vertex_info[3] < scene->vertex_info[2]) {
+        scene->vertex_data[2] = realloc(scene->vertex_data[2], (scene->vertex_info[2]) * 12);
+        scene->vertex_info[3] = scene->vertex_info[2];
+    }
 
-    // return i;
+    scene->vertex_info[4] += 2;
+    scene->triangle_count += 1;
 
-    // scene->vertex_pos_count += 3;
-    // scene->triangle_count += 1;
+    if (scene->vertex_info[5] < scene->vertex_info[4]) {
+        scene->vertex_data[4] = realloc(scene->vertex_data[4], (scene->vertex_info[0]) * 8);
+        scene->vertex_info[5] = scene->vertex_info[4];
+    }
 
-    // if (scene->vertex_pos_count > scene->vertex_pos_capacity) {
-    //     scene->vertex_pos_capacity *= 2;
+    if (scene->triangle_capacity < scene->triangle_count) {
+        scene->triangles.ai = realloc(scene->triangles.ai, (scene->triangle_count) * sizeof(uint32_t));
+        scene->triangles.bi = realloc(scene->triangles.bi, (scene->triangle_count) * sizeof(uint32_t));
+        scene->triangles.ci = realloc(scene->triangles.ci, (scene->triangle_count) * sizeof(uint32_t));
+        scene->triangles.nx = realloc(scene->triangles.nx, (scene->triangle_count) * sizeof(float));
+        scene->triangles.ny = realloc(scene->triangles.ny, (scene->triangle_count) * sizeof(float));
+        scene->triangles.nz = realloc(scene->triangles.nz, (scene->triangle_count) * sizeof(float));
+        scene->triangles.aabb = realloc(scene->triangles.aabb, (scene->triangle_count) * sizeof(AABB));
+        scene->triangles.centroid = realloc(scene->triangles.centroid, (scene->triangle_count) * sizeof(float) * 3);
+        scene->triangles.material = realloc(scene->triangles.material, (scene->triangle_count) * sizeof(uint32_t));
+        scene->triangle_capacity = scene->triangle_count;
+    }
 
-    //     scene->vertices.x = realloc(scene->vertices.x, scene->vertex_pos_capacity * sizeof(float));
-    //     scene->vertices.y = realloc(scene->vertices.y, scene->vertex_pos_capacity * sizeof(float));
-    //     scene->vertices.z = realloc(scene->vertices.z, scene->vertex_pos_capacity * sizeof(float));
-    // }
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 9] = a.x;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 8] = a.y;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 7] = a.z;
 
-    // if (scene->triangle_count > scene->triangle_capacity) {
-    //     scene->triangle_capacity *= 2;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 6] = b.x;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 5] = b.y;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 4] = b.z;
 
-    //     scene->triangles.ai = realloc(scene->triangles.ai, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.bi = realloc(scene->triangles.bi, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.ci = realloc(scene->triangles.ci, scene->triangle_capacity * sizeof(uint32_t));
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 3] = c.x;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 2] = c.y;
+    scene->vertex_data[0][3 * scene->vertex_info[1] - 1] = c.z;
 
-    //     scene->triangles.nai = realloc(scene->triangles.nai, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.nbi = realloc(scene->triangles.nbi, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.nci = realloc(scene->triangles.nci, scene->triangle_capacity * sizeof(uint32_t));
+    scene->triangles.ai[scene->triangle_count - 1] = scene->vertex_info[1] - 3;
+    scene->triangles.bi[scene->triangle_count - 1] = scene->vertex_info[1] - 2;
+    scene->triangles.ci[scene->triangle_count - 1] = scene->vertex_info[1] - 1;
 
-    //     scene->triangles.tai = realloc(scene->triangles.tai, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.tbi = realloc(scene->triangles.tbi, scene->triangle_capacity * sizeof(uint32_t));
-    //     scene->triangles.tci = realloc(scene->triangles.tci, scene->triangle_capacity * sizeof(uint32_t));
+    Vec ng = normalize(cross(v_sub(b, a), v_sub(c, a)));
 
-    //     scene->triangles.nx = realloc(scene->triangles.nx, scene->triangle_capacity * sizeof(float));
-    //     scene->triangles.ny = realloc(scene->triangles.ny, scene->triangle_capacity * sizeof(float));
-    //     scene->triangles.nz = realloc(scene->triangles.nz, scene->triangle_capacity * sizeof(float));
+    scene->triangles.nx[scene->triangle_count - 1] = ng.x;
+    scene->triangles.ny[scene->triangle_count - 1] = ng.y;
+    scene->triangles.nz[scene->triangle_count - 1] = ng.z;
 
-    //     scene->triangles.aabb = realloc(scene->triangles.aabb, scene->triangle_capacity * sizeof(AABB));
-    //     scene->triangles.centroid = realloc(scene->triangles.centroid, scene->triangle_capacity * 3 * sizeof(float));
-    //     scene->triangles.material = realloc(scene->triangles.material, scene->triangle_capacity * sizeof(Material *));
-    // }
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 9] = ng.x;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 8] = ng.y;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 7] = ng.z;
 
-    // scene->vertices.x[scene->vertex_pos_count - 3] = a.x;
-    // scene->vertices.y[scene->vertex_pos_count - 3] = a.y;
-    // scene->vertices.z[scene->vertex_pos_count - 3] = a.z;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 6] = ng.x;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 5] = ng.y;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 4] = ng.z;
 
-    // scene->vertices.x[scene->vertex_pos_count - 2] = b.x;
-    // scene->vertices.y[scene->vertex_pos_count - 2] = b.y;
-    // scene->vertices.z[scene->vertex_pos_count - 2] = b.z;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 3] = ng.x;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 2] = ng.y;
+    scene->vertex_data[1][3 * scene->vertex_info[1] - 1] = ng.z;
 
-    // scene->vertices.x[scene->vertex_pos_count - 1] = c.x;
-    // scene->vertices.y[scene->vertex_pos_count - 1] = c.y;
-    // scene->vertices.z[scene->vertex_pos_count - 1] = c.z;
 
-    // scene->triangles.ai[scene->triangle_count - 1] = scene->vertex_pos_count - 3;
-    // scene->triangles.bi[scene->triangle_count - 1] = scene->vertex_pos_count - 2;
-    // scene->triangles.ci[scene->triangle_count - 1] = scene->vertex_pos_count - 1;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 6] = 0.0f;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 5] = 0.0f;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 4] = 0.0f;
 
-    // scene->triangles.nx[scene->triangle_count - 1] = normalize(cross(v_sub(b, a), v_sub(c, a))).x;
-    // scene->triangles.ny[scene->triangle_count - 1] = normalize(cross(v_sub(b, a), v_sub(c, a))).y;
-    // scene->triangles.nz[scene->triangle_count - 1] = normalize(cross(v_sub(b, a), v_sub(c, a))).z;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 3] = 0.0f;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 2] = 0.0f;
+    scene->vertex_data[2][2 * scene->vertex_info[1] - 1] = 0.0f;
 
-    // scene->triangles.aabb[scene->triangle_count - 1] = (AABB){
-    //     .min = {fminf(fminf(a.x, b.x), c.x), fminf(fminf(a.y, b.y), c.y), fminf(fminf(a.z, b.z), c.z)},
-    //     .max = {fmaxf(fmaxf(a.x, b.x), c.x), fmaxf(fmaxf(a.y, b.y), c.y), fmaxf(fmaxf(a.z, b.z), c.z)}
-    // };
 
-    // scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 0] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[0] + scene->triangles.aabb[scene->triangle_count - 1].max[0]) / 2.0f;
-    // scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 1] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[1] + scene->triangles.aabb[scene->triangle_count - 1].max[1]) / 2.0f;
-    // scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 2] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[2] + scene->triangles.aabb[scene->triangle_count - 1].max[2]) / 2.0f;
+    scene->triangles.aabb[scene->triangle_count - 1] = (AABB){
+        .min = {fminf(fminf(a.x, b.x), c.x), fminf(fminf(a.y, b.y), c.y), fminf(fminf(a.z, b.z), c.z)},
+        .max = {fmaxf(fmaxf(a.x, b.x), c.x), fmaxf(fmaxf(a.y, b.y), c.y), fmaxf(fmaxf(a.z, b.z), c.z)}
+    };
 
-    // scene->triangles.material[scene->triangle_count - 1] = m;
+    scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 0] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[0] + scene->triangles.aabb[scene->triangle_count - 1].max[0]) / 2.0f;
+    scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 1] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[1] + scene->triangles.aabb[scene->triangle_count - 1].max[1]) / 2.0f;
+    scene->triangles.centroid[(scene->triangle_count - 1) * 3 + 2] = (float)(scene->triangles.aabb[scene->triangle_count - 1].min[2] + scene->triangles.aabb[scene->triangle_count - 1].max[2]) / 2.0f;
 
-    // return scene->triangle_count - 1;
+    scene->triangles.material[scene->triangle_count - 1] = m;
+
+    return scene->triangle_count - 1;
 }
 
 uint32_t add_vertex_pos(float x, float y, float z, Scene *scene) {

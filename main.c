@@ -157,7 +157,6 @@ static double random_double(double min, double max)
 //     .splecular_map = (size_t)-1,
 // };
 
-
 #define WIDTH 1920
 #define HEIGHT 1080
 
@@ -173,6 +172,8 @@ int main(void) {
 
 int create_import_scene(void) {
     clock_t start = clock();
+
+    srand(12345);
 
     const int width = WIDTH;
     const int height = HEIGHT;
@@ -192,41 +193,27 @@ int create_import_scene(void) {
         .aa_samples = AA
     };
 
-    import_glTF(&scene, "./glTF/DamagedHelmet.gltf");
+    //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
+    import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
     Mesh *mesh = (Mesh *)get_element(0, &scene.meshes);
-    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 3.14));
-
+    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 2.0));
+    
     Vec pos = ((Mesh *)get_element(0, &scene.meshes))->position;
-
-    printf("vertex_count: %u\n", scene.vertex_info[0]);
-    printf("normal_count: %u\n", scene.vertex_info[2]);
-    printf("texcoord_count: %u\n", scene.vertex_info[4]);
-    printf("triangle_count: %u\n", scene.triangle_count);
-
-    printf("pos: %f, %f, %f\n", pos.x, pos.y, pos.z);
-
+    
     Camera cam = create_look_at_camera(
         v_add(pos, vec(0.0, -3.0, 0.0)),
         pos,
         1.0472
     );
 
-    scene.dir_light.dir = normalize(vec(-0.4, 0.7, -0.5));
+    scene.dir_light = (DirectionalLight) {
+        .dir = normalize(vec(-0.5, -0.8, 1.0)),
+        .color = vec(1.0, 0.95, 0.9),
+        .intensity = 1,
+    };
 
-    // size_t mesh_id = import_obj_mesh(&scene, "./models/Castle/Castle OBJ.obj");
-    // //size_t mesh_id = import_mesh(&scene, "./models/body.obj");
-
-    // // Mesh *mesh = get_element(mesh_id, &scene.meshes);
-    // // //scale_mesh(&scene, mesh, vec(2.0, 2.0, 2.0));
-    // // //rotate_mesh(&scene, mesh, vec(0.3, 0.1, 0.2));
-    // // apply_mesh_transform(mesh);
-    // // // set_mesh_position(&scene, mesh, vec(
-    // //     mesh->size.x * -0.5,
-    // //     mesh->size.y * -0.5,
-    // //     mesh->size.z * -0.5
-    // // ));
-
-
+    scene.dir_light.neg_dir = neg(scene.dir_light.dir);
+    scene.dir_light.scaled_color = scale(scene.dir_light.color, scene.dir_light.intensity);
 
     clock_t end = clock();
 

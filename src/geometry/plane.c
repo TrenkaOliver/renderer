@@ -42,5 +42,5 @@ HitResult get_first_plane(Ray *ray, DynArray *planes) {
 
     Vec p = v_add(ray->o, scale(ray->v, t));
 
-    return (HitResult){.point = p, .ng = plane->n, .ns = plane->n, .t = t, .material = plane->m, .d_u = NAN, .d_v = NAN};
+    return (HitResult){.point = p, .ng = plane->n, .ns = plane->n, .tangent = vec(0.0, 0.0, 0.0), .bitangent = vec(0.0, 0.0, 0.0), .valid_tangent = 0, .t = t, .material = plane->m, .d_u = 0.0, .d_v = 0.0};
 }
