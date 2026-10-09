@@ -38,80 +38,11 @@ float srgb_to_linear(float x)
     return powf((x + 0.055) / 1.055, 2.4);
 }
 
-double random_01(void) {
-    return (double)rand() / ((double)RAND_MAX + 1.0);
-}
-
-Vec sky_hit(Vec v) {
-    double t = 0.5 * (v.z + 1.0);
-
-    Vec horizon  = vec(0.35, 0.35, 0.35);
-    Vec zenith = vec(0.90, 0.90, 0.90);
-
-    return v_add(scale(horizon, 1.0 - t), scale(zenith, t));
-}
-
-double clampd(double x, double min, double max) {
-    return fmax(min, fmin(max, x));
-}
-
-Vec sample_environment(Vec dir, Texture *env) {
-    double theta = atan2(dir.y, dir.x);
-    double phi = asin(clampd(dir.z, -1.0, 1.0));
-
-    double u = theta / (2.0 * M_PI) + 0.5;
-    double v = 0.5 - phi / M_PI;
-
-    double x = u * env->w;
-    double y = v * (env->h - 1);
-
-    int x0 = (int)floor(x);
-    int y0 = (int)floor(y);
-
-    double fx = x - x0;
-    double fy = y - y0;
-
-    // Horizontal wrapping.
-    x0 = (x0 % env->w + env->w) % env->w;
-    int x1 = (x0 + 1) % env->w;
-
-    // Vertical clamping.
-    y0 = (int)fmax(0, fmin(env->h - 1, y0));
-    int y1 = (int)fmax(0, fmin(env->h - 1, y0 + 1));
-
-    float *data = (float *)env->ptr;
-
-    int i00 = (y0 * env->w + x0) * 3;
-    int i10 = (y0 * env->w + x1) * 3;
-    int i01 = (y1 * env->w + x0) * 3;
-    int i11 = (y1 * env->w + x1) * 3;
-
-    Vec c00 = vec(data[i00], data[i00 + 1], data[i00 + 2]);
-    Vec c10 = vec(data[i10], data[i10 + 1], data[i10 + 2]);
-    Vec c01 = vec(data[i01], data[i01 + 1], data[i01 + 2]);
-    Vec c11 = vec(data[i11], data[i11 + 1], data[i11 + 2]);
-
-    Vec cx0 = v_add(
-        scale(c00, 1.0 - fx),
-        scale(c10, fx)
-    );
-
-    Vec cx1 = v_add(
-        scale(c01, 1.0 - fx),
-        scale(c11, fx)
-    );
-
-    return v_add(
-        scale(cx0, 1.0 - fy),
-        scale(cx1, fy)
-    );
-}
-
 Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     HitResult hit = get_first_hit(ray, scene, bvh);
 
     if (hit.t < 0.0) {
-        return sample_environment(ray->v, &scene->env);
+        return sample(ray->v, &scene->environment);
     }
 
     double u = hit.d_u - floor(hit.d_u);
@@ -283,12 +214,6 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
         f0.z + (1.0 - f0.z) * factor_reflection
     );
 
-    // printf("metallic: %f\n", metallic);
-    // printf("f0: %f, %f, %f\n", f0.x, f0.y, f0.z);
-    // printf("NdotV: %f\n", NdotV);
-    // printf("factor_reflection: %f\n", factor_reflection);
-    // printf("f_reflection: %f, %f, %f\n", f_reflection.x, f_reflection.y, f_reflection.z);
-
     Vec one_minus_f = vec(
         1.0 - f_direct.x,
         1.0 - f_direct.y,
@@ -355,117 +280,107 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
         );
     }
 
-    Vec c_ambient = scale(
-        hadamard(
-            scene->global_ambient,
-            c_base
-        ),
-        1.0 - metallic
+    Vec irradiance = sample(N, &scene->irradiance);
+
+    Vec c_diffuse_ibl = scale(
+        hadamard(irradiance, c_base),
+        (1.0 - metallic) / M_PI
     );
 
-    c_ambient = scale(c_ambient, ao);
+    c_diffuse_ibl = scale(c_diffuse_ibl, ao);
 
-    Vec c_reflected = vec(
-        0.0,
-        0.0,
-        0.0
-    );
-
-    Vec reflection_dir;
-    Ray reflection_ray;
-
-    if (depth > 0) {
-        reflection_dir = normalize(
-                v_sub(
-                    ray->v,
-                    scale(
-                        N,
-                        2.0 * dot(N, ray->v)
-                    )
-                )
-        );        
-
-        reflection_ray = create_ray(
-            v_add(
-                hit.point,
-                scale(hit.ng, EPSILON)
-            ),
-            reflection_dir
-        );
-
-        c_reflected = trace_ray(
-            &reflection_ray,
-            scene,
-            cam,
-            bvh,
-            depth - 1
-        );
-    }
-
-    // printf("f_direct: %f, %f, %f\n", f_direct.x, f_direct.y, f_direct.z);
-    // printf("f_reflection: %f, %f, %f\n", f_reflection.x, f_reflection.y, f_reflection.z);
-    // printf("c_reflected: %f, %f, %f\n", c_reflected.x, c_reflected.y, c_reflected.z);
-    // printf("\n");
-
-    Vec c_reflection = hadamard(
-        f_reflection,
-        c_reflected
-    );
-
-
-    Vec c = v_add(
-        v_add(
-            c_ambient,
-            c_diffuse
-        ),
-        v_add(
-            c_specular,
-            c_reflection
+    Vec R = normalize(
+        v_sub(
+            scale(N, 2.0 * NdotV),
+            V
         )
     );
 
-//     if (metallic > 0.9 && len(c) < 0.1) {
-//         printf("depth: %d, len: %f, vec: %f %f %f\n", depth, len(reflection_dir), reflection_dir.x, reflection_dir.y, reflection_dir.z);
+    Vec c_prefiltered = sample_prefiltered(R, roughness, scene->prefiltered);
 
-//         HitResult rh = get_first_hit(&reflection_ray, scene, bvh);
+    Vec brdf = sample_brdf_lut(NdotV, roughness, &scene->brdf_lut);
 
-//         printf("gn: %f %f %f\n", rh.ng.x, rh.ng.y, rh.ng.z);
-        
-//         printf(
-//             "Ng.R = %.9f, Ns.R = %.9f\n",
-//             dot(hit.ng, reflection_dir),
-//             dot(N, reflection_dir)
-//         );
+    Vec specular_factor = vec(
+        f0.x * brdf.x + brdf.y,
+        f0.y * brdf.x + brdf.y,
+        f0.z * brdf.x + brdf.y
+    );
 
-//         printf(
-//     "ORIGINAL: Ng=(%.6f %.6f %.6f), Ns=(%.6f %.6f %.6f)\n"
-//     "          R=(%.6f %.6f %.6f)\n"
-//     "          Ng.R=%.9f Ns.R=%.9f\n",
-//     hit.ng.x, hit.ng.y, hit.ng.z,
-//     hit.ns.x, hit.ns.y, hit.ns.z,
-//     reflection_dir.x, reflection_dir.y, reflection_dir.z,
-//     dot(hit.ng, reflection_dir),
-//     dot(hit.ns, reflection_dir)
-// );
+    Vec c_specular_ibl = hadamard(
+        c_prefiltered,
+        specular_factor
+    );
 
-// printf(
-//     "ORIGIN=(%.9f %.9f %.9f)\n"
-//     "HIT   =(%.9f %.9f %.9f)\n"
-//     "OFFSET=(%.9f %.9f %.9f)\n",
-//     reflection_ray.o.x,
-//     reflection_ray.o.y,
-//     reflection_ray.o.z,
-//     hit.point.x,
-//     hit.point.y,
-//     hit.point.z,
-//     reflection_ray.o.x - hit.point.x,
-//     reflection_ray.o.y - hit.point.y,
-//     reflection_ray.o.z - hit.point.z
-// );
+    Vec c_reflection_or_specular_ibl;
 
-//         printf("\n");
-//     }
+    if (depth > 0 && roughness < 0.2 && metallic > 0.5) {
+        Vec c_reflected = vec(0.0, 0.0, 0.0);
 
+        int sample_count = 1;
+
+        for (int i = 0; i < sample_count; i++) {
+            double u, v;
+            hammersley(i, sample_count, &u, &v);
+    
+            Vec H = importance_sample_GGX(u, v, roughness, N);
+    
+            Vec reflection_dir = normalize(
+                v_sub(
+                    scale(H, 2.0 * dot(V, H)),
+                    V
+                )
+            );
+    
+            Ray reflection_ray = create_ray(
+                v_add(hit.point, scale(hit.ng, EPSILON)),
+                reflection_dir
+            );
+    
+            Vec sample = trace_ray(
+                &reflection_ray,
+                scene,
+                cam,
+                bvh,
+                depth - 1
+            );
+
+            c_reflected = v_add(c_reflected, sample);
+        }
+
+        c_reflected = scale(c_reflected, 1.0 / sample_count);
+
+        double reflection_strenght = (1.0 - roughness) * (1.0 - roughness);
+
+        c_reflection_or_specular_ibl = v_add(
+            scale(c_reflected, reflection_strenght),
+            scale(c_specular_ibl, 1.0 - reflection_strenght)
+        );
+
+        c_reflection_or_specular_ibl = hadamard(
+            f_reflection,
+            c_reflection_or_specular_ibl
+        );
+
+    } else {
+        c_reflection_or_specular_ibl = c_specular_ibl;
+    }
+
+
+    Ray shadow_ray = create_ray(
+        v_add(hit.point, scale(hit.ng, EPSILON)),
+        L
+    );
+
+    Vec c = vec(0.0, 0.0, 0.0);
+
+    if (!is_shaded(&shadow_ray, scene, bvh)) {
+
+    }
+
+    c = v_add(c, c_diffuse);
+    c = v_add(c, c_diffuse_ibl);
+    c = v_add(c, c_reflection_or_specular_ibl);
+    c = v_add(c, c_specular);
     c = v_add(c, c_emissive);
 
     return c;

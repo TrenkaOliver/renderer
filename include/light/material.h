@@ -6,16 +6,6 @@
 #include "stdint.h"
 
 typedef struct Material {
-    // Vec diffuse;
-    // Vec specular;
-
-    // double shininess;
-    // double reflectivity;
-
-    // size_t diffuse_map;
-    // size_t splecular_map;
-    // size_t normal_map;
-
     Vec base_color_factor;
     float metallic;
     float roughness;

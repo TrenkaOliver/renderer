@@ -157,8 +157,14 @@ static double random_double(double min, double max)
 //     .splecular_map = (size_t)-1,
 // };
 
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH 3840
+#define HEIGHT 2160
+
+// #define WIDTH 1920
+// #define HEIGHT 1080
+
+// #define WIDTH 640
+// #define HEIGHT 360
 
 #define AA 1
 #define MAX_DEPTH 2
@@ -195,17 +201,30 @@ int create_import_scene(void) {
 
     //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
-    import_env(&scene, "./glTF/env/small_hangar_01_1k.hdr");
-    Mesh *mesh = (Mesh *)get_element(0, &scene.meshes);
-    rotate_mesh(&scene, mesh, vec(0.0, 3.14, 2.14));
+    import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
+    import_env(&scene, "./glTF/env/hangar.hdr");
+
+    Mesh *mesh0 = (Mesh *)get_element(0, &scene.meshes);
+    Mesh *mesh1 = (Mesh *)get_element(1, &scene.meshes);
+    rotate_mesh(&scene, mesh0, vec(0.0, 3.14, 2.0));
+    rotate_mesh(&scene, mesh1, vec(0.0, 3.14, -1.7));
     
-    Vec pos = ((Mesh *)get_element(0, &scene.meshes))->position;
-    
+    move_mesh(&scene, mesh0, vec(1.0, 0.0, 0.0));
+    move_mesh(&scene, mesh1, vec(-1.0, 1.0, 0.0));
+
+    Vec pos0 = ((Mesh *)get_element(0, &scene.meshes))->position;
+    Vec pos1 = ((Mesh *)get_element(1, &scene.meshes))->position;
+
+    printf("%u\n", scene.triangle_count);
+
     Camera cam = create_look_at_camera(
-        v_add(pos, vec(0.0, -3.0, 0.0)),
-        pos,
+        v_add(scale(v_add(pos0, pos1), 0.5), vec(0.0, -3.0, 0.0)),
+        scale(v_add(pos0, pos1), 0.5),
         1.0472
     );
+
+    //add_plane(&scene, v_add(pos0, vec(0.0, 0.0, -5.0)), vec(0.0, 0.0, 1.0), get_element(0, &scene.materials))
+
 
     scene.dir_light = (DirectionalLight) {
         .dir = normalize(vec(-0.5, -0.8, 1.0)),
