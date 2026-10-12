@@ -13,6 +13,8 @@ uint64_t primitive_tests = 0;
 uint64_t first_object_called = 0;
 uint64_t s_visited_nodes = 0;
 uint64_t s_first_object_called = 0;
+uint32_t aabb_test = 0;
+uint32_t triangle_test = 0;
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     unsigned char *pa, *pp;
@@ -48,40 +50,86 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
 
     printf("Bvh creation: %.3f s\n", (double)(bvh_end - bvh_start) / CLOCKS_PER_SEC);
 
+    printf("next: %u\n", next);
+
     // printf("max_i: %u\n", scene->triangle_count);
 
     clock_t render_start = clock();
 
-    for (i = 0; i < settings->height; i++) {
-        for (j = 0; j < settings->width; j++) {
-            c = vec(0.0, 0.0, 0.0);            
-            for (aa_i = 0; aa_i < settings->aa_samples; aa_i++) {
-                aa_up = (aa_i + 0.5) * inv_samples;
-                up = (1.0 - (i + aa_up) * inv_height * 2.0) * fov_scale;
-                for (aa_j = 0; aa_j < settings->aa_samples; aa_j++) {
-                    aa_right = (aa_j + 0.5) * inv_samples;
-                    right = (-1.0 + (j + aa_right) * inv_width * 2.0) * x_scale;
+    for (i = 0; i < settings->height; i += 2) {        
+        for (j = 0; j < settings->width; j += 4) {            
+            Ray ray[8];
+            
+            for (int ii = 0; ii < 2; ii++) {
+                int y = i + ii;
+                up = (1.0 - (y + 0.5) * inv_height * 2.0) * fov_scale;
+                
+                for (int jj = 0; jj < 4; jj++) {
+                    int x = j + jj;
+                    right = (-1.0 + (x + 0.5) * inv_width * 2.0) * x_scale;
 
-                    ray = create_ray(
+                    ray[4 * ii + jj] = create_ray(
                         cam->position,
                         normalize(v_add(
                             cam->forward,
                             v_add(
-                                scale(cam->right, right), 
+                                scale(cam->right, right),
                                 scale(cam->up, up)
                             )
                         ))
                     );
-
-                    c = v_add(c, scale(trace_ray(&ray, scene, cam, &bvh, settings->max_depth), color_scale));
                 }
             }
-            p = color_to_pixel(c);
-            *pp++ = p.r;
-            *pp++ = p.g;
-            *pp++ = p.b;
+
+            ps_Vec c = packed_trace_ray(ray, scene, cam, &bvh, settings->max_depth);
+
+            PackedPixel p = color_to_packed_pixel(c);
+            for (int k = 0; k < 8; k++) {
+                int y = i + k / 4;
+                int x = j + k % 4;
+
+                unsigned char *dst = pa + ((size_t)y * settings->width + x) * 3;
+
+                dst[0] = p.r[k];
+                dst[1] = p.g[k];
+                dst[2] = p.b[k];
+            }
         }
     }
+
+    // for (i = 0; i < settings->height; i++) {
+    //     for (j = 0; j < settings->width; j++) {
+    //         c = vec(0.0, 0.0, 0.0);            
+    //         for (aa_i = 0; aa_i < settings->aa_samples; aa_i++) {
+    //             aa_up = (aa_i + 0.5) * inv_samples;
+    //             up = (1.0 - (i + aa_up) * inv_height * 2.0) * fov_scale;
+    //             for (aa_j = 0; aa_j < settings->aa_samples; aa_j++) {
+    //                 aa_right = (aa_j + 0.5) * inv_samples;
+    //                 right = (-1.0 + (j + aa_right) * inv_width * 2.0) * x_scale;
+
+    //                 ray = create_ray(
+    //                     cam->position,
+    //                     normalize(v_add(
+    //                         cam->forward,
+    //                         v_add(
+    //                             scale(cam->right, right), 
+    //                             scale(cam->up, up)
+    //                         )
+    //                     ))
+    //                 );
+
+    //                 c = v_add(c, scale(trace_ray(&ray, scene, cam, &bvh, settings->max_depth), color_scale));
+    //             }
+    //         }
+    //         p = color_to_pixel(c);
+    //         *pp++ = p.r;
+    //         *pp++ = p.g;
+    //         *pp++ = p.b;
+    //     }
+    // }
+
+    printf("aabb tests: %u\n", aabb_test);
+    printf("triangle tests: %u\n", triangle_test);
 
     fwrite(pa, sizeof(char), count, f);
     

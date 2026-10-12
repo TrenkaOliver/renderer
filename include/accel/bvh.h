@@ -7,6 +7,8 @@
 //#include "geometry/object.h"
 #include "geometry/triangle.h"
 
+extern uint32_t next;
+
 typedef struct BVHNode {
     AABB aabb;
     uint32_t first_primitive_or_right_child;

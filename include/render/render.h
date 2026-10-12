@@ -7,6 +7,9 @@
 #include "scene/scene.h"
 #include "camera/camera.h"
 
+extern uint32_t aabb_test;
+extern uint32_t triangle_test;
+
 typedef struct Color {
     double r;
     double g;
@@ -26,8 +29,15 @@ typedef struct RenderSettings {
     int aa_samples;
 } RenderSettings;
 
+typedef struct PackedPixel {
+    uint8_t r[8];
+    uint8_t g[8];
+    uint8_t b[8];
+} PackedPixel;
+
 Pixel create_pixel(unsigned char r, unsigned char g, unsigned char b);
 Pixel color_to_pixel(Vec c);
+PackedPixel color_to_packed_pixel(ps_Vec c);
 
 int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings);
 

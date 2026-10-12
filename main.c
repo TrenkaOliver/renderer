@@ -157,14 +157,14 @@ static double random_double(double min, double max)
 //     .splecular_map = (size_t)-1,
 // };
 
-#define WIDTH 3840
-#define HEIGHT 2160
+// #define WIDTH 3840
+// #define HEIGHT 2160
 
 // #define WIDTH 1920
 // #define HEIGHT 1080
 
-// #define WIDTH 640
-// #define HEIGHT 360
+#define WIDTH 640
+#define HEIGHT 360
 
 #define AA 1
 #define MAX_DEPTH 2
@@ -209,8 +209,8 @@ int create_import_scene(void) {
     rotate_mesh(&scene, mesh0, vec(0.0, 3.14, 2.0));
     rotate_mesh(&scene, mesh1, vec(0.0, 3.14, -1.7));
     
-    move_mesh(&scene, mesh0, vec(1.0, 0.0, 0.0));
-    move_mesh(&scene, mesh1, vec(-1.0, 1.0, 0.0));
+    move_mesh(&scene, mesh0, vec(0.0, 0.0, 0.0));
+    move_mesh(&scene, mesh1, vec(0.0, 0.0, 0.0));
 
     Vec pos0 = ((Mesh *)get_element(0, &scene.meshes))->position;
     Vec pos1 = ((Mesh *)get_element(1, &scene.meshes))->position;
@@ -218,7 +218,7 @@ int create_import_scene(void) {
     printf("%u\n", scene.triangle_count);
 
     Camera cam = create_look_at_camera(
-        v_add(scale(v_add(pos0, pos1), 0.5), vec(0.0, -3.0, 0.0)),
+        v_add(scale(v_add(pos0, pos1), 0.5), vec(0.0, -1.5, 0.0)),
         scale(v_add(pos0, pos1), 0.5),
         1.0472
     );

@@ -38,6 +38,452 @@ float srgb_to_linear(float x)
     return powf((x + 0.055) / 1.055, 2.4);
 }
 
+__m256 packed_srgb_to_linear(__m256 x) {
+    const __m256 threshold = _mm256_set1_ps(0.04045f);
+    const __m256 inv_12_92 = _mm256_set1_ps(1.0f / 12.92f);
+    const __m256 scale = _mm256_set1_ps(1.0f / 1.055f);
+    const __m256 offset = _mm256_set1_ps(0.055f);
+    const __m256 exponent = _mm256_set1_ps(2.4f);
+
+    __m256 low = _mm256_mul_ps(x, inv_12_92);
+
+    __m256 base = _mm256_mul_ps(
+        _mm256_add_ps(x, offset),
+        scale
+    );
+
+    float lanes[8];
+    _mm256_storeu_ps(lanes, base);
+
+    for (int i = 0; i < 8; i++)
+        lanes[i] = powf(lanes[i], 2.4f);
+
+    __m256 high = _mm256_loadu_ps(lanes);
+
+    __m256 mask = _mm256_cmp_ps(x, threshold, _CMP_LE_OQ);
+
+    return _mm256_blendv_ps(high, low, mask);
+}
+
+// ps_Vec read_map(Texture *map[8], __m256 u, __m256 v, int stride) {
+//     int iw_arr[8], ih_arr[8];
+//     float fw_arr[8], fh_arr[8];
+
+//     for (int i = 0; i < 8; i++) {
+//         if (map[i]) {
+//             iw_arr[i] = stride * map[i]->w - stride;
+//             ih_arr[i] = stride * map[i]->h - stride;
+        
+//             fw_arr[i] = stride * map[i]->w - (float)stride;
+//             fh_arr[i] = stride * map[i]->h - (float)stride;
+//         } else {
+//             iw_arr[i] = 0;
+//             ih_arr[i] = 0;
+//             fw_arr[i] = 0.0f;
+//             fh_arr[i] = 0.0f;
+//         }
+//     }
+
+//     __m256i iw = _mm256_loadu_si256((__m256i_u *)iw_arr);
+//     __m256i ih = _mm256_loadu_si256((__m256i_u *)ih_arr);
+
+//     __m256 fw = _mm256_load_ps(fw_arr);
+//     __m256 fh = _mm256_load_ps(fh_arr);
+
+//     __m256i _i0 = _mm256_setzero_si256();
+
+//     __m256i x = _mm256_max_epi32(
+//         _mm256_min_epi32(
+//             _mm256_cvttps_epi32(_mm256_mul_ps(u, fw)),
+//             iw
+//         ),
+//         _i0
+//     );
+
+//     __m256i y = _mm256_max_epi32(
+//         _mm256_min_epi32(
+//             _mm256_cvttps_epi32(_mm256_mul_ps(v, fh)),
+//             ih
+//         ),
+//         _i0
+//     );
+
+//     __m256i idx = _mm256_add_epi32(_mm256_mullo_epi32(y, iw), x);
+    
+//     float r[8], g[8], b[8];
+//     int offset[8];
+
+//     _mm256_storeu_si256((__m256i_u *)offset, idx);
+
+//     float D = 1.0f / 255.0f;
+
+//     for (int i = 0; i < 8; i++) {
+//         if (map[i]) {
+//             r[i] = map[i]->ptr[offset[i] + 0] * D;
+//             g[i] = map[i]->ptr[offset[i] + 1] * D;
+//             b[i] = map[i]->ptr[offset[i] + 2] * D;
+//         } else {
+//             r[i] = 0.0f;
+//             g[i] = 0.0f;
+//             b[i] = 0.0f;
+//         }
+//     }
+
+//     return (ps_Vec) {
+//         .x = _mm256_loadu_ps(r),
+//         .y = _mm256_loadu_ps(g),
+//         .z = _mm256_loadu_ps(b)
+//     };
+// }
+
+ps_Vec read_map(Texture *map[8], __m256 u, __m256 v, int stride)
+{
+    int width_arr[8], height_arr[8];
+    int max_x_arr[8], max_y_arr[8];
+    float fw_arr[8], fh_arr[8];
+
+    for (int i = 0; i < 8; i++) {
+        if (map[i]) {
+            width_arr[i] = map[i]->w;
+            height_arr[i] = map[i]->h;
+
+            max_x_arr[i] = map[i]->w - 1;
+            max_y_arr[i] = map[i]->h - 1;
+
+            fw_arr[i] = (float)(map[i]->w - 1);
+            fh_arr[i] = (float)(map[i]->h - 1);
+        } else {
+            width_arr[i] = 0;
+            height_arr[i] = 0;
+
+            max_x_arr[i] = 0;
+            max_y_arr[i] = 0;
+
+            fw_arr[i] = 0.0f;
+            fh_arr[i] = 0.0f;
+        }
+    }
+
+    __m256i width = _mm256_loadu_si256((const __m256i_u *)width_arr);
+    __m256i max_x = _mm256_loadu_si256((const __m256i_u *)max_x_arr);
+    __m256i max_y = _mm256_loadu_si256((const __m256i_u *)max_y_arr);
+
+    __m256 fw = _mm256_loadu_ps(fw_arr);
+    __m256 fh = _mm256_loadu_ps(fh_arr);
+
+    __m256 zero = _mm256_setzero_ps();
+    __m256 one = _mm256_set1_ps(1.0f);
+
+    u = _mm256_max_ps(zero, _mm256_min_ps(u, one));
+    v = _mm256_max_ps(zero, _mm256_min_ps(v, one));
+
+    __m256i x = _mm256_max_epi32(
+        _mm256_min_epi32(
+            _mm256_cvttps_epi32(_mm256_mul_ps(u, fw)),
+            max_x
+        ),
+        _mm256_setzero_si256()
+    );
+
+    __m256i y = _mm256_max_epi32(
+        _mm256_min_epi32(
+            _mm256_cvttps_epi32(_mm256_mul_ps(v, fh)),
+            max_y
+        ),
+        _mm256_setzero_si256()
+    );
+
+    // Pixel index, not byte offset.
+    __m256i idx = _mm256_add_epi32(
+        _mm256_mullo_epi32(y, width),
+        x
+    );
+
+    int offset[8];
+    _mm256_storeu_si256((__m256i_u *)offset, idx);
+
+    float r[8], g[8], b[8];
+    const float inv_255 = 1.0f / 255.0f;
+
+    for (int i = 0; i < 8; i++) {
+        if (map[i]) {
+            size_t byte_offset = (size_t)offset[i] * stride;
+
+            r[i] = map[i]->ptr[byte_offset + 0] * inv_255;
+            g[i] = map[i]->ptr[byte_offset + 1] * inv_255;
+            b[i] = map[i]->ptr[byte_offset + 2] * inv_255;
+        } else {
+            r[i] = 0.0f;
+            g[i] = 0.0f;
+            b[i] = 0.0f;
+        }
+    }
+
+    return (ps_Vec) {
+        .x = _mm256_loadu_ps(r),
+        .y = _mm256_loadu_ps(g),
+        .z = _mm256_loadu_ps(b)
+    };
+}
+
+ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
+    PackedHitResult hit = packed_get_first_object(ray, bvh, &scene->materials, &scene->textures);
+    
+    return (ps_Vec) {
+        hit.t,
+        hit.valid_hit,
+        hit.valid_tangent
+    };
+    //sample environment for no hits
+    ps_Vec res = packed_sample(hit.ray.v, &scene->environment);
+
+
+    //calc uv coordinates
+    __m256 u = _mm256_sub_ps(hit.d_u, _mm256_floor_ps(hit.d_u));
+    __m256 v = _mm256_sub_ps(hit.d_v, _mm256_floor_ps(hit.d_v));
+
+    //load base color
+    ps_Vec c_base = read_map(hit.material.base_color_map, u, v, 3);
+
+    c_base = (ps_Vec) {
+        .x = packed_srgb_to_linear(c_base.x),
+        .y = packed_srgb_to_linear(c_base.y),
+        .z = packed_srgb_to_linear(c_base.z),
+    };
+
+    c_base = ps_hadamard(c_base, hit.material.base_color_factor);
+
+    //sample metallic and roughness
+    ps_Vec metallic_roughness_vec = read_map(hit.material.metallic_roughness_map, u, v, 3);
+
+    __m256 metallic = _mm256_mul_ps(metallic_roughness_vec.z, hit.material.metallic);
+    __m256 roughness = _mm256_mul_ps(metallic_roughness_vec.y, hit.material.roughness);
+
+    //sample occulsion
+    ps_Vec occulsion_vec = read_map(hit.material.occlusion_map, u, v, 3);
+
+    __m256 _f1 = _mm256_set1_ps(1.0f);
+    __m256 ao = _mm256_fmadd_ps(hit.material.occlusion_strenght, _mm256_sub_ps(occulsion_vec.x, _f1), _f1);
+
+    //sample emissive
+    ps_Vec c_emissive = read_map(hit.material.emissive_map, u, v, 3);
+    
+    c_emissive = (ps_Vec) {
+        .x = packed_srgb_to_linear(c_emissive.x),
+        .y = packed_srgb_to_linear(c_emissive.y),
+        .z = packed_srgb_to_linear(c_emissive.z),
+    };
+
+    c_emissive = ps_hadamard(c_emissive, hit.material.emissive_factor);
+
+    //sample normal
+    ps_Vec nmap = read_map(hit.material.normal_map, u, v, 3);
+
+    __m256 _f2 = _mm256_set1_ps(2.0f);
+
+    nmap = (ps_Vec) {
+        _mm256_fmsub_ps(nmap.x, _f2, _f1),
+        _mm256_fmsub_ps(nmap.y, _f2, _f1),
+        _mm256_fmsub_ps(nmap.z, _f2, _f1),
+    };
+
+    nmap.x = _mm256_mul_ps(nmap.x, hit.material.normal_scale);
+    nmap.y = _mm256_mul_ps(nmap.y, hit.material.normal_scale);
+
+    ps_Vec ns = ps_normalize(
+        ps_v_add(
+            ps_v_add(
+                ps_scale_ps(hit.tangent, nmap.x),
+                ps_scale_ps(hit.bitangent, nmap.y)
+            ),
+            ps_scale_ps(hit.ns, nmap.z)
+        )
+    );
+
+    ns.x = _mm256_blendv_ps(ns.x, hit.ns.x, hit.valid_tangent);
+    ns.y = _mm256_blendv_ps(ns.y, hit.ns.y, hit.valid_tangent);
+    ns.z = _mm256_blendv_ps(ns.z, hit.ns.z, hit.valid_tangent);
+
+    //pre calculations
+
+    ps_Vec L = ps_from_vec(scene->dir_light.dir);
+
+    ps_Vec V = ps_normalize(ps_v_sub(ps_from_vec(cam->position), hit.point));
+
+    ps_Vec N = ns;
+    __m256 _f0 = _mm256_setzero_ps();
+    __m256 mask = _mm256_cmp_ps(ps_dot(N, V), _f0, _CMP_LT_OQ);
+    ps_Vec neg_N = ps_scale_ss(N, -1.0f);
+    N.x = _mm256_blendv_ps(N.x, neg_N.x, mask);
+    N.y = _mm256_blendv_ps(N.y, neg_N.y, mask);
+    N.z = _mm256_blendv_ps(N.z, neg_N.z, mask);
+
+    __m256 NdotL = _mm256_max_ps(_f0, ps_dot(N, L));
+    __m256 NdotV = _mm256_max_ps(_f0, ps_dot(N, V));
+
+    __m256 _f004 = _mm256_set1_ps(0.04f);
+    __m256 _c = _mm256_mul_ps(_mm256_sub_ps(_f1, metallic), _f004);
+
+    ps_Vec f0 = (ps_Vec) {
+        .x = _mm256_fmadd_ps(metallic, c_base.x, _c),
+        .y = _mm256_fmadd_ps(metallic, c_base.y, _c),
+        .z = _mm256_fmadd_ps(metallic, c_base.z, _c)
+    };
+
+    ps_Vec one_minus_f0 = (ps_Vec) {
+        .x = _mm256_sub_ps(_f1, f0.x),
+        .y = _mm256_sub_ps(_f1, f0.y),
+        .z = _mm256_sub_ps(_f1, f0.z),
+    };
+
+    ps_Vec H = ps_normalize(ps_v_add(L, V));
+
+    __m256 NdotH = _mm256_max_ps(_f0, ps_dot(N, H));
+    __m256 VdotH = _mm256_max_ps(_f0, ps_dot(V, H));
+
+    __m256 _x = _mm256_sub_ps(_f1, VdotH);
+    __m256 _x2 = _mm256_mul_ps(_x, _x);
+    __m256 _x4 = _mm256_mul_ps(_x2, _x2);
+    __m256 factor_direct = _mm256_mul_ps(_x4, _x);
+
+    ps_Vec f_direct = (ps_Vec) {
+        .x = _mm256_fmadd_ps(factor_direct, one_minus_f0.x, f0.x),
+        .y = _mm256_fmadd_ps(factor_direct, one_minus_f0.y, f0.y),
+        .z = _mm256_fmadd_ps(factor_direct, one_minus_f0.z, f0.z)
+    };
+
+    ps_Vec one_minus_f_direct = (ps_Vec) {
+        .x = _mm256_sub_ps(_f1, f_direct.x),
+        .y = _mm256_sub_ps(_f1, f_direct.y),
+        .z = _mm256_sub_ps(_f1, f_direct.z),
+    };
+
+    _x = _mm256_sub_ps(_f1, NdotV);
+    _x2 = _mm256_mul_ps(_x, _x);
+    _x4 = _mm256_mul_ps(_x2, _x2);
+    __m256 factor_reflection = _mm256_mul_ps(_x4, _x);
+
+    ps_Vec f_reflection = (ps_Vec) {
+        .x = _mm256_fmadd_ps(factor_reflection, one_minus_f0.x, f0.x),
+        .y = _mm256_fmadd_ps(factor_reflection, one_minus_f0.y, f0.y),
+        .z = _mm256_fmadd_ps(factor_reflection, one_minus_f0.z, f0.z)
+    };
+
+    //calculate diffuse color
+
+    __m256 one_minus_metallic = _mm256_sub_ps(_f1, metallic);
+
+    ps_Vec diffuse_color = ps_scale_ps(
+        ps_hadamard(c_base, one_minus_f_direct),
+        one_minus_metallic
+    );
+
+    ps_Vec scaled_color = ps_from_vec(scene->dir_light.scaled_color);
+
+    ps_Vec c_diffuse = ps_scale_ps(
+        ps_hadamard(scaled_color, diffuse_color),
+        NdotL
+    );
+
+    //calculate specular color
+
+    __m256 alpha = _mm256_mul_ps(roughness, roughness);
+    __m256 alpha2 = _mm256_mul_ps(alpha, alpha);
+
+    __m256 d = _mm256_fmadd_ps(_mm256_mul_ps(NdotH, NdotH), _mm256_sub_ps(alpha2, _f1), _f1);
+
+    __m256 _fPI = _mm256_set1_ps(M_PI); 
+    __m256 D = _mm256_div_ps(alpha2, _mm256_mul_ps(_fPI, _mm256_mul_ps(d, d)));
+
+    __m256 _roughness_plus_1 = _mm256_add_ps(roughness, _f1);
+    __m256 _f8 = _mm256_set1_ps(8.0f);
+    __m256 k = _mm256_div_ps(_mm256_mul_ps(_roughness_plus_1, _roughness_plus_1), _f8);
+    
+    __m256 one_minus_k = _mm256_sub_ps(_f1, k);
+
+    __m256 Gv = _mm256_div_ps(NdotV, _mm256_fmadd_ps(NdotV, one_minus_k, k));
+
+    __m256 Gl = _mm256_div_ps(NdotL, _mm256_fmadd_ps(NdotL, one_minus_k, k));
+
+    __m256 G = _mm256_mul_ps(Gv, Gl);
+
+    __m256 _f4 = _mm256_set1_ps(4.0f);
+
+    ps_Vec specular_brdf = ps_scale_ps(
+        f_direct,
+        _mm256_div_ps(_mm256_mul_ps(D, G), _mm256_mul_ps(_f4, _mm256_mul_ps(NdotV, NdotL)))
+    );
+
+    ps_Vec c_specular = ps_scale_ps(
+        ps_hadamard(scaled_color, specular_brdf),
+        NdotL
+    );
+
+    mask = _mm256_or_ps(
+        _mm256_cmp_ps(NdotL, _f0, _CMP_LE_OQ),
+        _mm256_cmp_ps(NdotV, _f0, _CMP_LE_OQ)
+    );
+
+    c_specular = (ps_Vec) {
+        .x = _mm256_blendv_ps(c_specular.x, _f0, mask),
+        .y = _mm256_blendv_ps(c_specular.y, _f0, mask),
+        .z = _mm256_blendv_ps(c_specular.z, _f0, mask)
+    };
+
+    //calculate ibl diffuse
+
+    ps_Vec irradiance = packed_sample(N, &scene->irradiance);
+
+    ps_Vec c_diffuse_ibl = ps_scale_ps(
+        ps_hadamard(irradiance, c_base),
+        _mm256_div_ps(one_minus_metallic, _fPI)
+    );
+
+    c_diffuse_ibl = ps_scale_ps(c_diffuse_ibl, ao);
+
+    //calculate ibl specular
+
+    ps_Vec R = ps_normalize(ps_v_sub(
+        ps_scale_ps(N, _mm256_mul_ps(_f2, NdotV)), 
+        V
+    ));
+
+    ps_Vec c_prefiltered = packed_sample_prefiltered(R, roughness, scene->prefiltered);
+    ps_Vec brdf = packed_sample_brdf_lut(NdotV, roughness, &scene->brdf_lut);
+
+    ps_Vec specular_factor = {
+        .x = _mm256_fmadd_ps(f0.x, brdf.x, brdf.y),
+        .y = _mm256_fmadd_ps(f0.y, brdf.x, brdf.y),
+        .z = _mm256_fmadd_ps(f0.z, brdf.x, brdf.y),
+    };
+
+    ps_Vec c_specular_ibl = ps_hadamard(c_prefiltered, specular_factor);
+
+    //ignore recursive reflections for now
+
+    ps_Vec c_reflection_or_specular_ibl = c_specular_ibl;
+
+    ps_Vec c = {
+        .x = _f0,
+        .y = _f0,
+        .z = _f0
+    };
+
+    c = ps_v_add(c, c_diffuse);
+    c = ps_v_add(c, c_diffuse_ibl);
+    c = ps_v_add(c, c_reflection_or_specular_ibl);
+    c = ps_v_add(c, c_specular);
+    c = ps_v_add(c, c_emissive);
+
+    ps_Vec out =  {
+        .x = _mm256_blendv_ps(res.x, c.x, hit.valid_hit),
+        .y = _mm256_blendv_ps(res.y, c.y, hit.valid_hit),
+        .z = _mm256_blendv_ps(res.z, c.z, hit.valid_hit),
+    };
+
+    return out;
+}
+
 Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
     HitResult hit = get_first_hit(ray, scene, bvh);
 

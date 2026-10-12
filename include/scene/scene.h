@@ -48,6 +48,10 @@ Vec sample(Vec N, Texture *map);
 Vec sample_prefiltered(Vec R, double roughness, Texture maps[]);
 Vec sample_brdf_lut(double NdotV, double roughness, Texture *map);
 
+ps_Vec packed_sample(ps_Vec N, Texture *map);
+ps_Vec packed_sample_prefiltered(ps_Vec R, __m256 roughness, Texture maps[]);
+ps_Vec packed_sample_brdf_lut(__m256 NdotV, __m256 roughness, Texture *map);
+
 double radical_inverse(unsigned k);
 void hammersley(uint32_t i, uint32_t n, double *u, double *v);
 void make_coord_space(Vec N, Vec *T, Vec *B);

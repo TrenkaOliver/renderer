@@ -125,5 +125,25 @@ static inline ps_Vec ps_normalize(ps_Vec vec) {
     return ps_scale_ps(vec, inv_len);
 }
 
+static inline ps_Vec ps_lerp_fma(ps_Vec a, ps_Vec b, __m256 t) {
+    return (ps_Vec) {
+        .x = _mm256_fmadd_ps(
+            t,
+            _mm256_sub_ps(b.x, a.x),
+            a.x
+        ),
+        .y = _mm256_fmadd_ps(
+            t,
+            _mm256_sub_ps(b.y, a.y),
+            a.y
+        ),
+        .z = _mm256_fmadd_ps(
+            t,
+            _mm256_sub_ps(b.z, a.z),
+            a.z
+        )
+    };
+}
+
 
 #endif

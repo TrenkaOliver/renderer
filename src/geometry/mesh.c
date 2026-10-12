@@ -326,6 +326,8 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
     yyjson_val *meshes = yyjson_obj_get(root, "meshes");
     size_t mesh_array_count = yyjson_arr_size(meshes);
 
+    printf("mesh_array_count: %llu\n", mesh_array_count);
+
     for (size_t i = 0; i < mesh_array_count; i++) {
         yyjson_val *item = yyjson_arr_get(meshes, i);
 
@@ -349,6 +351,8 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
 
             uint32_t vertex_offset = scene->vertex_info[0];
 
+            printf("vertex count0: %u\n", scene->vertex_info[0]);
+
             for (int k = 0; k < 3; k++) {
                 __gltfAccessor *accessor = (__gltfAccessor *)get_element(yyjson_get_uint(yyjson_obj_get(attributes, titles[k])), &accessor_array);
                 if (scene->vertex_info[2 * k + 1] < scene->vertex_info[2 * k] + accessor->count) {
@@ -368,6 +372,8 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
                 // }
                 scene->vertex_info[2 * k] += accessor->count;
             }
+
+            printf("vertex count1: %u\n", scene->vertex_info[0]);
 
             size_t material_index = yyjson_get_uint(yyjson_obj_get(primitive, "material"));
             size_t indices = yyjson_get_uint(yyjson_obj_get(primitive, "indices"));
@@ -446,6 +452,9 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
 
             scene->triangle_count += index_accessor->count / 3;
         }
+
+        printf("triangles: %u\n", scene->triangle_count);
+
         mesh->first_triangle = first_triangle;
         mesh->first_vertex_pos = first_vertex;
         mesh->first_vertex_normal = first_vertex;
@@ -765,65 +774,65 @@ void apply_mesh_transform(Mesh *mesh) {
     mesh->rotation = vec(0.0, 0.0, 0.0);
 }
 
-uint32_t clone_mesh(Scene *scene, uint32_t id) {
-    uint32_t new_id = grow_dyn_array(&scene->meshes);
-    Mesh *mesh = get_element(id, &scene->meshes);
-    Mesh *m = get_element(new_id, &scene->meshes);
+// uint32_t clone_mesh(Scene *scene, uint32_t id) {
+//     uint32_t new_id = grow_dyn_array(&scene->meshes);
+//     Mesh *mesh = get_element(id, &scene->meshes);
+//     Mesh *m = get_element(new_id, &scene->meshes);
 
-    *m = *mesh;
+//     *m = *mesh;
 
-    m->first_triangle = scene->triangle_count;
-    m->first_vertex_pos = scene->vertex_info[0];
-    m->first_vertex_normal = scene->vertex_info[0];
-    m->first_vertex_texcoord = scene->vertex_info[0];
-
-
-    if (scene->triangle_capacity < scene->triangle_count + mesh->triangle_count) {
-        scene->triangles.ai = realloc(scene->triangles.ai, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
-        scene->triangles.bi = realloc(scene->triangles.bi, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
-        scene->triangles.ci = realloc(scene->triangles.ci, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
-        scene->triangles.nx = realloc(scene->triangles.nx, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
-        scene->triangles.ny = realloc(scene->triangles.ny, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
-        scene->triangles.nz = realloc(scene->triangles.nz, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
-        scene->triangles.aabb = realloc(scene->triangles.aabb, (scene->triangle_count + mesh->triangle_count) * sizeof(AABB));
-        scene->triangles.centroid = realloc(scene->triangles.centroid, (scene->triangle_count + mesh->triangle_count) * sizeof(float) * 3);
-        scene->triangles.material = realloc(scene->triangles.material, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
-        scene->triangle_capacity = scene->triangle_count + mesh->triangle_count;
-    }
-    memcpy(scene->triangles.ai + m->first_triangle, scene->triangles.ai + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
-    memcpy(scene->triangles.bi + m->first_triangle, scene->triangles.bi + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
-    memcpy(scene->triangles.ci + m->first_triangle, scene->triangles.ci + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
-    memcpy(scene->triangles.nx + m->first_triangle, scene->triangles.nx + mesh->first_triangle, mesh->triangle_count * sizeof(float));
-    memcpy(scene->triangles.ny + m->first_triangle, scene->triangles.ny + mesh->first_triangle, mesh->triangle_count * sizeof(float));
-    memcpy(scene->triangles.nz + m->first_triangle, scene->triangles.nz + mesh->first_triangle, mesh->triangle_count * sizeof(float));
-    memcpy(scene->triangles.aabb + m->first_triangle, scene->triangles.aabb + mesh->first_triangle, mesh->triangle_count * sizeof(AABB));
-    memcpy(scene->triangles.centroid + 3 * m->first_triangle, scene->triangles.centroid + 3 * mesh->first_triangle, 3 * mesh->triangle_count * sizeof(float));
-    memcpy(scene->triangles.material + m->first_triangle, scene->triangles.material + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
-    scene->triangle_count += mesh->triangle_count;
+//     m->first_triangle = scene->triangle_count;
+//     m->first_vertex_pos = scene->vertex_info[0];
+//     m->first_vertex_normal = scene->vertex_info[0];
+//     m->first_vertex_texcoord = scene->vertex_info[0];
 
 
-    if (scene->vertex_info[1] < scene->vertex_info[0] + mesh->vertex_pos_count) {
-        scene->vertex_data[0] = realloc(scene->vertex_data[0], (scene->vertex_info[0] + mesh->vertex_pos_count) * 3 * sizeof(float));
-        scene->vertex_info[1] = scene->vertex_info[0] + mesh->vertex_pos_count;
-    }
-    memcpy(scene->vertex_data[0] + 3 * m->first_vertex_pos, scene->vertex_data[0] + 3 * mesh->first_vertex_pos, mesh->vertex_pos_count * 3 * sizeof(float));
-    scene->vertex_info[0] += mesh->vertex_pos_count;
+//     if (scene->triangle_capacity < scene->triangle_count + mesh->triangle_count) {
+//         scene->triangles.ai = realloc(scene->triangles.ai, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
+//         scene->triangles.bi = realloc(scene->triangles.bi, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
+//         scene->triangles.ci = realloc(scene->triangles.ci, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
+//         scene->triangles.nx = realloc(scene->triangles.nx, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
+//         scene->triangles.ny = realloc(scene->triangles.ny, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
+//         scene->triangles.nz = realloc(scene->triangles.nz, (scene->triangle_count + mesh->triangle_count) * sizeof(float));
+//         scene->triangles.aabb = realloc(scene->triangles.aabb, (scene->triangle_count + mesh->triangle_count) * sizeof(AABB));
+//         scene->triangles.centroid = realloc(scene->triangles.centroid, (scene->triangle_count + mesh->triangle_count) * sizeof(float) * 3);
+//         scene->triangles.material = realloc(scene->triangles.material, (scene->triangle_count + mesh->triangle_count) * sizeof(uint32_t));
+//         scene->triangle_capacity = scene->triangle_count + mesh->triangle_count;
+//     }
+//     memcpy(scene->triangles.ai + m->first_triangle, scene->triangles.ai + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
+//     memcpy(scene->triangles.bi + m->first_triangle, scene->triangles.bi + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
+//     memcpy(scene->triangles.ci + m->first_triangle, scene->triangles.ci + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
+//     memcpy(scene->triangles.nx + m->first_triangle, scene->triangles.nx + mesh->first_triangle, mesh->triangle_count * sizeof(float));
+//     memcpy(scene->triangles.ny + m->first_triangle, scene->triangles.ny + mesh->first_triangle, mesh->triangle_count * sizeof(float));
+//     memcpy(scene->triangles.nz + m->first_triangle, scene->triangles.nz + mesh->first_triangle, mesh->triangle_count * sizeof(float));
+//     memcpy(scene->triangles.aabb + m->first_triangle, scene->triangles.aabb + mesh->first_triangle, mesh->triangle_count * sizeof(AABB));
+//     memcpy(scene->triangles.centroid + 3 * m->first_triangle, scene->triangles.centroid + 3 * mesh->first_triangle, 3 * mesh->triangle_count * sizeof(float));
+//     memcpy(scene->triangles.material + m->first_triangle, scene->triangles.material + mesh->first_triangle, mesh->triangle_count * sizeof(uint32_t));
+//     scene->triangle_count += mesh->triangle_count;
 
 
-    if (scene->vertex_info[3] < scene->vertex_info[2] + mesh->vertex_normal_count) {
-        scene->vertex_data[1] = realloc(scene->vertex_data[1], (scene->vertex_info[2] + mesh->vertex_normal_count) * 3 * sizeof(float));
-        scene->vertex_info[3] = scene->vertex_info[2] + mesh->vertex_normal_count;
-    }
-    memcpy(scene->vertex_data[1] + 3 * m->first_vertex_normal, scene->vertex_data[1] + 3 * mesh->first_vertex_normal, mesh->vertex_normal_count * 3 * sizeof(float));
-    scene->vertex_info[2] += mesh->vertex_normal_count;
+//     if (scene->vertex_info[1] < scene->vertex_info[0] + mesh->vertex_pos_count) {
+//         scene->vertex_data[0] = realloc(scene->vertex_data[0], (scene->vertex_info[0] + mesh->vertex_pos_count) * 3 * sizeof(float));
+//         scene->vertex_info[1] = scene->vertex_info[0] + mesh->vertex_pos_count;
+//     }
+//     memcpy(scene->vertex_data[0] + 3 * m->first_vertex_pos, scene->vertex_data[0] + 3 * mesh->first_vertex_pos, mesh->vertex_pos_count * 3 * sizeof(float));
+//     scene->vertex_info[0] += mesh->vertex_pos_count;
 
 
-    if (scene->vertex_info[5] < scene->vertex_info[4] + mesh->vertex_texcoord_count) {
-        scene->vertex_data[2] = realloc(scene->vertex_data[2], (scene->vertex_info[4] + mesh->vertex_texcoord_count) * 2 * sizeof(float));
-        scene->vertex_info[5] = scene->vertex_info[4] + mesh->vertex_texcoord_count;
-    }
-    memcpy(scene->vertex_data[2] + 2 * m->first_vertex_texcoord, scene->vertex_data[2] + 2 * mesh->first_vertex_texcoord, mesh->vertex_texcoord_count * 2 * sizeof(float));
-    scene->vertex_info[4] += mesh->vertex_texcoord_count;
+//     if (scene->vertex_info[3] < scene->vertex_info[2] + mesh->vertex_normal_count) {
+//         scene->vertex_data[1] = realloc(scene->vertex_data[1], (scene->vertex_info[2] + mesh->vertex_normal_count) * 3 * sizeof(float));
+//         scene->vertex_info[3] = scene->vertex_info[2] + mesh->vertex_normal_count;
+//     }
+//     memcpy(scene->vertex_data[1] + 3 * m->first_vertex_normal, scene->vertex_data[1] + 3 * mesh->first_vertex_normal, mesh->vertex_normal_count * 3 * sizeof(float));
+//     scene->vertex_info[2] += mesh->vertex_normal_count;
 
-    return new_id;    
-}
+
+//     if (scene->vertex_info[5] < scene->vertex_info[4] + mesh->vertex_texcoord_count) {
+//         scene->vertex_data[2] = realloc(scene->vertex_data[2], (scene->vertex_info[4] + mesh->vertex_texcoord_count) * 2 * sizeof(float));
+//         scene->vertex_info[5] = scene->vertex_info[4] + mesh->vertex_texcoord_count;
+//     }
+//     memcpy(scene->vertex_data[2] + 2 * m->first_vertex_texcoord, scene->vertex_data[2] + 2 * mesh->first_vertex_texcoord, mesh->vertex_texcoord_count * 2 * sizeof(float));
+//     scene->vertex_info[4] += mesh->vertex_texcoord_count;
+
+//     return new_id;    
+// }
