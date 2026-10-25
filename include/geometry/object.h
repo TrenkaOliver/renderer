@@ -27,7 +27,7 @@ double sphere_ray_intersection(Object *object, Ray *ray, Info *info);
 HitResult get_sphere_result(Ray *ray, Object *object, Info *info, double t);
 
 double triangle_ray_intersection(Object *object, Ray *ray, Info *info);
-__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info);
+__m256 packed_triangle_ray_intersection(uint32_t idx, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info);
 HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, float **vertex_data, DynArray *materials);
 PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint32_t building_indices[8], PackedRay ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, float **vertex_data, DynArray *materials, DynArray *textures);
 HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t);

@@ -6,9 +6,11 @@
 #include "math/vec.h"
 #include "scene/scene.h"
 #include "camera/camera.h"
+#include "accel/bvh.h"
 
 extern uint32_t aabb_test;
 extern uint32_t triangle_test;
+extern uint32_t total_miss;
 
 typedef struct Color {
     double r;
@@ -39,6 +41,6 @@ Pixel create_pixel(unsigned char r, unsigned char g, unsigned char b);
 Pixel color_to_pixel(Vec c);
 PackedPixel color_to_packed_pixel(ps_Vec c);
 
-int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings);
+int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tree *bvh);
 
 #endif

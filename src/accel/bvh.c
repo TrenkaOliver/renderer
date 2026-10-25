@@ -8,8 +8,8 @@
 #include "accel/cmp.h"
 #include "geometry/triangle.h"
 
-#define C_TRAVELSAL 1
-#define C_INTERSECT 1
+#define C_TRAVERSAL 1.0f
+#define C_INTERSECT 1.0f
 #define BIN_COUNT 32
 #define LEAF_SIZE 8
 
@@ -20,6 +20,7 @@ typedef struct Bin {
 
 static BuildingTriangle building_triangles;
 static BVHNode *nodes;
+static float *sah_cost;
 uint32_t node_count;
 //uint32_t leaf_count = 0;
 
@@ -137,6 +138,204 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
     return idx + 1;
 }
 
+// AABB bound_cache[BIN_COUNT][BIN_COUNT];
+// uint32_t count_cache[BIN_COUNT][BIN_COUNT];
+// float cost_cache[BIN_COUNT][BIN_COUNT];
+// float best_cost;
+// float best_cent_min;
+// float best_inv_width;
+// int best_split[7] = {0};
+// int current_split[7] = {0};
+// int best_axis;
+
+// void find_best_split(int start, int groups_left, float accumulated_cost, int axis, float cent_min, float inv_width);
+// void swap_triangles(uint32_t a, uint32_t b);
+// void setup_leaf(BVH *bvh, float **vertex_data, uint32_t first_triangle, uint32_t count, int src);
+
+// uint32_t build_wide_tree(uint32_t start, uint32_t end, uint32_t idx) {
+//     uint32_t count = end - start;
+
+//     if (count < LEAF_SIZE) {
+//         //leaf creation logic
+//     }
+
+//     Bin bins[BIN_COUNT];
+//     float parent_sa = get_surface_area(start, end);
+//     best_cost = FLT_MAX;
+//     best_axis = -1;
+
+//     for (int axis = 0; axis < 3; axis++) {
+//         for (int i = 0; i < BIN_COUNT; i++) {
+//             bins[i] = (Bin) {
+//                 .aabb = (AABB) {
+//                     .min = {FLT_MAX, FLT_MAX, FLT_MAX},
+//                     .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
+//                 },
+//                 .count = 0
+//             };
+//         }
+
+//         float cent_min = FLT_MAX;
+//         float cent_max = -FLT_MAX;
+
+//         for (int i = start; i < end; i++) {
+//             cent_min = fminf(cent_min, building_triangles.centroid[i * 3 + axis]);
+//             cent_max = fmaxf(cent_max, building_triangles.centroid[i * 3 + axis]);
+//         }
+
+//         if (cent_min == cent_max) continue;
+
+//         float inv_width = BIN_COUNT / (cent_max - cent_min);
+
+//         for (uint32_t i = start; i < end; i++) {
+//             int bin = (int)((building_triangles.centroid[i * 3 + axis] - cent_min) * inv_width);
+//             if (bin >= BIN_COUNT) bin = BIN_COUNT - 1;
+//             bins[bin].aabb = aabb_merge(bins[bin].aabb, building_triangles.aabb[i]);
+//             bins[bin].count++;
+//         }
+
+//         for (int i = 0; i < BIN_COUNT; i++) {
+//             bound_cache[i][i] = bins[i].aabb;
+//             count_cache[i][i] = bins[i].count;
+//             for (int j = i + 1; j < BIN_COUNT; j++) {
+//                 bound_cache[i][j] = aabb_merge(bound_cache[i][j - 1], bins[j].aabb);
+//                 count_cache[i][j] = count_cache[i][j - 1] + bins[j].count;
+
+//                 cost_cache[i][j] =
+//                 C_TRAVERSAL +
+//                 C_INTERSECT * (
+//                     (SA(bound_cache[i][j]) / parent_sa) * count_cache[i][j]
+//                 ); 
+//             }
+//         }
+
+//         find_best_split(0, 8, 0, axis, cent_min, inv_width);
+//     }
+
+//     uint32_t bin_partition_map[BIN_COUNT];
+//     uint32_t next_indices[8];
+//     AABB aabbs[8];
+
+//     for (int i = 0; i < BIN_COUNT; i++) {
+//         bins[i] = (Bin) {
+//             .aabb = (AABB) {
+//                 .min = {FLT_MAX, FLT_MAX, FLT_MAX},
+//                 .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
+//             },
+//             .count = 0
+//         };
+//     }
+
+//     int i, j;
+//     for (i = 0, j = 0; i < 7; i++) {
+//         while (j < best_split[i]) {
+//             bin_partition_map[j++] = i;
+//             aabbs[i] = aabb_merge(aabbs[i], bins[j].aabb);
+//         }
+//     }
+
+//     i++;
+//     while (j < BIN_COUNT) {
+//         bin_partition_map[j++] = 7;
+//         aabbs[i] = aabb_merge(aabbs[i], bins[j].aabb);
+//     }
+
+//     next_indices[0] = 0;
+//     for (int i = 0; i < 7; i++) {
+//         next_indices[i + 1] = best_split[i];
+//     }
+
+//     for (uint32_t i = start; i < end; i++) {
+//         int bin = (int)((building_triangles.centroid[i * 3 + best_axis] - best_cent_min) * best_inv_width);
+//         swap_triangles(i, next_indices[bin_partition_map[bin]]++);
+//     }
+
+//     uint32_t child_indices[8];
+
+//     int prev = 0;
+//     for (int i = 0; i < 8; i++) {
+//         child_indices[i] = build_wide_tree(prev, next_indices[i], 0);
+//         prev = next_indices[i];
+//     }
+
+//     //recursing logic
+// }
+
+// void find_best_split(int start, int groups_left, float accumulated_cost, int axis, float cent_min, float inv_width) {
+//     if (groups_left == 1) {
+//         float total_cost = accumulated_cost + cost_cache[start][BIN_COUNT - 1];
+
+//         if (total_cost < best_cost) {
+//             best_cost = total_cost;
+//             best_cent_min = cent_min;
+//             best_inv_width = inv_width;
+
+//             for (int i = 0; i < 7; i++) best_split[i] = current_split[i];
+//         }        
+//         return;
+//     }
+
+//     int max_end = BIN_COUNT - groups_left;
+
+//     for (int end = start; end < max_end; end++) {
+//         float group_cost = cost_cache[start][end];
+
+//         current_split[8 - groups_left] = end + 1;
+
+//         find_best_split(end + 1, groups_left - 1, accumulated_cost + group_cost, axis, cent_min, inv_width);
+//     }
+// }
+
+// void swap_triangles(uint32_t a, uint32_t b) {
+//     uint32_t tmp_ai = building_triangles.ai[a];
+//     uint32_t tmp_bi = building_triangles.bi[a];
+//     uint32_t tmp_ci = building_triangles.ci[a];
+
+//     float tmp_nx = building_triangles.nx[a];
+//     float tmp_ny = building_triangles.ny[a];
+//     float tmp_nz = building_triangles.nz[a];
+
+//     AABB tmp_aabb = building_triangles.aabb[a];
+
+//     float tmp_centroid_x = building_triangles.centroid[a * 3 + 0];
+//     float tmp_centroid_y = building_triangles.centroid[a * 3 + 1];
+//     float tmp_centroid_z = building_triangles.centroid[a * 3 + 2];
+
+//     uint32_t tmp_material = building_triangles.material[a];
+
+//     building_triangles.ai[a] = building_triangles.ai[b];
+//     building_triangles.bi[a] = building_triangles.bi[b];
+//     building_triangles.ci[a] = building_triangles.ci[b];
+
+//     building_triangles.nx[a] = building_triangles.nx[b];
+//     building_triangles.ny[a] = building_triangles.ny[b];
+//     building_triangles.nz[a] = building_triangles.nz[b];
+
+//     building_triangles.aabb[a] = building_triangles.aabb[b];
+
+//     building_triangles.centroid[a * 3 + 0] = building_triangles.centroid[b * 3 + 0];
+//     building_triangles.centroid[a * 3 + 1] = building_triangles.centroid[b * 3 + 1];
+//     building_triangles.centroid[a * 3 + 2] = building_triangles.centroid[b * 3 + 2];
+
+//     building_triangles.material[a] = building_triangles.material[b];
+
+//     building_triangles.ai[b] = tmp_ai;
+//     building_triangles.bi[b] = tmp_bi;
+//     building_triangles.ci[b] = tmp_ci;
+
+//     building_triangles.nx[b] = tmp_nx;
+//     building_triangles.ny[b] = tmp_ny;
+//     building_triangles.nz[b] = tmp_nz;
+
+//     building_triangles.aabb[b] = tmp_aabb;
+
+//     building_triangles.centroid[b * 3 + 0] = tmp_centroid_x;
+//     building_triangles.centroid[b * 3 + 1] = tmp_centroid_y;
+//     building_triangles.centroid[b * 3 + 2] = tmp_centroid_z;
+
+//     building_triangles.material[b] = tmp_material;
+// }
+
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
     uint32_t count = end - start;
 
@@ -148,8 +347,8 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
     float best_cost = FLT_MAX;
     float best_inv_width;
     float best_cent_min;
-    int best_split;
-    int best_axis;
+    int best_split = -1;
+    int best_axis = -1;
 
     for (int axis = 0; axis < 3; axis++) {
         for (i = 0; i < BIN_COUNT; i++) {
@@ -207,8 +406,11 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             if (left_count[i] == 0 || right_count[i + 1] == 0) continue;
 
             float cost =
-            (SA(left_bounds[i]) / parent_sa) * left_count[i] +
-            (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1];
+            C_TRAVERSAL + 
+            C_INTERSECT * (
+                (SA(left_bounds[i]) / parent_sa) * left_count[i] +
+                (SA(right_bounds[i + 1]) / parent_sa) * right_count[i + 1]
+            );
 
             if (cost < best_cost) {
                 best_cost = cost;
@@ -219,6 +421,8 @@ uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx) {
             }
         }
     }
+
+    if (best_axis == -1 || best_split == -1) return create_node(start, count, idx);
 
     uint32_t left = start;
     uint32_t right = end - 1;
@@ -329,9 +533,66 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, float **vertex_data, size_t c
 
     triangles_ptr = &runtime_triangles;
 
+    sah_cost = malloc(node_count * sizeof(float));
+
+    for (uint32_t i = node_count; i-- > 0;) {
+        BVHNode *node = &nodes[i];
+
+        if (node->primitive_count) {
+            sah_cost[i] = C_INTERSECT * node->primitive_count;
+        } else {
+            uint32_t left = i + 1;
+            uint32_t right = node->first_primitive_or_right_child;
+
+            float parent_sa = SA(node->aabb);
+
+            if (parent_sa > 0.0f) {
+                sah_cost[i] =
+                    C_TRAVERSAL
+                    + (SA(nodes[left].aabb) / parent_sa) * sah_cost[left]
+                    + (SA(nodes[right].aabb) / parent_sa) * sah_cost[right];
+            } else {
+                // Degenerate bounds: avoid division by zero.
+                sah_cost[i] = C_TRAVERSAL
+                    + fmaxf(sah_cost[left], sah_cost[right]);
+            }
+        }
+    }
+
     collapse_bvh_node(&bvh, vertex_data, 0);
 
-    printf("created nodes: %u\n", created_nodes);
+    uint64_t total_leaves = 0;
+    uint64_t total_primitives = 0;
+    uint32_t nodes_with_leaves = 0;
+
+    for (uint32_t i = 0; i < created_nodes; i++) {
+        BVH8Node *node = &bvh8nodes[i];
+
+        if (node->leaf_count > 0) {
+            nodes_with_leaves++;
+            total_leaves += node->leaf_count;
+
+            for (uint32_t j = node->internal_count;
+                j < node->internal_count + node->leaf_count;
+                j++) {
+                total_primitives += node->primitive_count[j];
+            }
+        }
+    }
+
+    printf("Nodes containing leaves: %u\n", nodes_with_leaves);
+    printf("Total leaf entries: %lu\n", (unsigned long)total_leaves);
+    printf("Average leaves per node: %.2f\n",
+        nodes_with_leaves
+            ? (double)total_leaves / nodes_with_leaves
+            : 0.0);
+
+    printf("Total primitives in leaves: %lu\n",
+        (unsigned long)total_primitives);
+    printf("Average primitives per leaf: %.2f\n",
+        total_leaves
+            ? (double)total_primitives / total_leaves
+            : 0.0);
 
     BVH8Tree bvh8tree = {
         .nodes = bvh8nodes,
@@ -357,19 +618,23 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, float **vertex_data, size_t c
 void setup_leaf(BVH *bvh, float **vertex_data, uint32_t first_triangle, uint32_t count, int src) {
     int i;
     for (i = 0; i < count; i++) {
-        triangles_ptr->arr[next + triangles_offset * 0 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 0];
-        triangles_ptr->arr[next + triangles_offset * 1 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 1];
-        triangles_ptr->arr[next + triangles_offset * 2 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 2];
-        triangles_ptr->arr[next + triangles_offset * 3 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 0];
-        triangles_ptr->arr[next + triangles_offset * 4 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 1];
-        triangles_ptr->arr[next + triangles_offset * 5 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 2];
-        triangles_ptr->arr[next + triangles_offset * 6 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 0];
-        triangles_ptr->arr[next + triangles_offset * 7 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 1];
-        triangles_ptr->arr[next + triangles_offset * 8 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 2];
+        float ax = triangles_ptr->arr[next + triangles_offset * 0 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 0];
+        float ay = triangles_ptr->arr[next + triangles_offset * 1 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 1];
+        float az =triangles_ptr->arr[next + triangles_offset * 2 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 2];
+
+        triangles_ptr->arr[next + triangles_offset * 3 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 0] - ax;
+        triangles_ptr->arr[next + triangles_offset * 4 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 1] - ay;
+        triangles_ptr->arr[next + triangles_offset * 5 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 2] - az;
+
+        triangles_ptr->arr[next + triangles_offset * 6 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 0] - ax;
+        triangles_ptr->arr[next + triangles_offset * 7 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 1] - ay;
+        triangles_ptr->arr[next + triangles_offset * 8 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 2] - az;
 
         triangles_ptr->building_idx[next + i] = first_triangle + i;
     }
 }
+
+
 
 uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
     AABB bounds[8];
@@ -403,22 +668,22 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
     while (count < 8) {
         float lowes_cost = FLT_MAX;
-        float current_cost = 0.0;
         int best_split = -1;
 
-        for (uint32_t i = 0; i < count; i++)
-            current_cost += SA(bounds[i]);
-
         for (int i = 0; i < count; i++) {
-            float cost = 0.0;
+            if (primitive_count[i])
+                continue;
 
-            if (primitive_count[i]) continue;
+            uint32_t left = indices[i] + 1;
+            uint32_t right = bvh->nodes[indices[i]].first_primitive_or_right_child;
 
-            cost =
-            current_cost
-            - SA(bounds[i])
-            + SA(bvh->nodes[indices[i] + 1].aabb)
-            + SA(bvh->nodes[bvh->nodes[indices[i]].first_primitive_or_right_child].aabb);
+            float old_cost = SA(bounds[i]) * sah_cost[indices[i]];
+
+            float new_cost =
+            SA(bvh->nodes[left].aabb) * sah_cost[left]
+            + SA(bvh->nodes[right].aabb) * sah_cost[right];
+
+            float cost = new_cost - old_cost;
 
             if (cost < lowes_cost) {
                 best_split = i;

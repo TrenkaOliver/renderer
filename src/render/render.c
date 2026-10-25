@@ -15,8 +15,9 @@ uint64_t s_visited_nodes = 0;
 uint64_t s_first_object_called = 0;
 uint32_t aabb_test = 0;
 uint32_t triangle_test = 0;
+uint32_t total_miss = 0;
 
-int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
+int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tree *bvh) {
     unsigned char *pa, *pp;
     int i, j, aa_i, aa_j;
     double right, up, aa_right, aa_up, aspect, fov_scale, color_scale, x_scale, inv_width, inv_height, inv_samples;
@@ -24,9 +25,6 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     Pixel p;
     Vec c;
     Ray ray;
-    BVH8Tree bvh;
-
-    clock_t bvh_start = clock();
 
     fprintf(f, "P6\n");
     fprintf(f, "%d %d\n", settings->width, settings->height);
@@ -44,17 +42,9 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     inv_height = 1.0 / settings->height;
     inv_samples = 1.0 / settings->aa_samples;
 
-    bvh = create_bvh8_tree(&scene->triangles, scene->vertex_data, scene->triangle_count);
-
-    clock_t bvh_end = clock();
-
-    printf("Bvh creation: %.3f s\n", (double)(bvh_end - bvh_start) / CLOCKS_PER_SEC);
-
-    printf("next: %u\n", next);
+    // printf("next: %u\n", next);
 
     // printf("max_i: %u\n", scene->triangle_count);
-
-    clock_t render_start = clock();
 
     for (i = 0; i < settings->height; i += 2) {        
         for (j = 0; j < settings->width; j += 4) {            
@@ -81,7 +71,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
                 }
             }
 
-            ps_Vec c = packed_trace_ray(ray, scene, cam, &bvh, settings->max_depth);
+            ps_Vec c = packed_trace_ray(ray, scene, cam, bvh, settings->max_depth);
 
             PackedPixel p = color_to_packed_pixel(c);
             for (int k = 0; k < 8; k++) {
@@ -128,16 +118,17 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
     //     }
     // }
 
-    printf("aabb tests: %u\n", aabb_test);
-    printf("triangle tests: %u\n", triangle_test);
+    // printf("aabb tests: %u\n", aabb_test);
+    // printf("triangle tests: %u\n", triangle_test);
+    // printf("no_traversal: %u\n", total_miss);
+    // printf("traversal: %u\n", 360 * 640 - total_miss);
+    // aabb_test = 0;
+    // triangle_test = 0;
+    // total_miss = 0;
 
     fwrite(pa, sizeof(char), count, f);
     
     free(pa);
-
-    clock_t render_end = clock();
-
-    printf("Rendering: %.3f s\n", (double)(render_end - render_start) / CLOCKS_PER_SEC);
 
     return 0;
 }

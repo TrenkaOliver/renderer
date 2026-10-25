@@ -4,18 +4,19 @@
 #include "render/render.h"
 
 static inline void move_near_fw(uint32_t idx[], float t[], int count) {
-    for (int iter = 0; iter < 2; iter++) {
-        for (int i = 1; i < count; i++) {
-            if (t[i] > t[i - 1]) {
-                float t_tmp = t[i - 1];
-                t[i - 1] = t[i];
-                t[i] = t_tmp;
+    for (int i = 1; i < count; i++) {
+        float key_t = t[i];
+        uint32_t key_idx = idx[i];
+        int j = i;
 
-                uint32_t idx_tmp = idx[i - 1];
-                idx[i - 1] = idx[i];
-                idx[i] = idx_tmp;
-            }
+        while (j > 0 && t[j - 1] < key_t) {
+            t[j] = t[j - 1];
+            idx[j] = idx[j - 1];
+            j--;
         }
+
+        t[j] = key_t;
+        idx[j] = key_idx;
     }
 }
 
@@ -97,7 +98,6 @@ ScalarHitResult scalar_get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *mater
         idx = idx_stack[sp];
 
         ps_t_aabb = packed_aabb_ray_intersection(&bvh->nodes[idx].bounds, &packed_ray);
-        aabb_test++;
 
         valid = _mm256_and_ps(
             _mm256_cmp_ps(ps_t_aabb, zero, _CMP_GE_OQ),
@@ -108,21 +108,36 @@ ScalarHitResult scalar_get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *mater
 
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
-            triangle_test++;
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles, &info);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], &packed_ray, &bvh->runtime_triangles, &info);
 
-            _mm256_storeu_ps(t_values, ps_t_triangle);
-            _mm256_storeu_ps(u_values, info.u);
-            _mm256_storeu_ps(v_values, info.v);
+            __m256 eps = _mm256_set1_ps(EPSILON);
+            __m256 valid_hits = _mm256_and_ps(
+                _mm256_cmp_ps(ps_t_triangle, eps, _CMP_GE_OQ),
+                _mm256_cmp_ps(ps_t_triangle, ps_t_min, _CMP_LT_OQ)
+            );
 
-            for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
-                if (t_values[lane] >= EPSILON && t_values[lane] < t_min) {
-                    t_min = t_values[lane];
-                    u = u_values[lane];
-                    v = v_values[lane];
-                    ps_t_min = _mm256_set1_ps(t_min);
-                    best_idx = bvh->nodes[idx].idx[i] + lane;
-                }
+            unsigned lane_bits = (1u << bvh->nodes[idx].primitive_count[i]) - 1u;
+            unsigned valid_bits = _mm256_movemask_ps(valid_hits) & lane_bits;
+
+            if (valid_bits) {
+                __m256 candidates = _mm256_blendv_ps(_mm256_set1_ps(FLT_MAX), ps_t_triangle, valid_hits);
+
+                __m256 m = _mm256_min_ps(candidates, _mm256_permute2f128_ps(candidates, candidates, 1));
+                m = _mm256_min_ps(m, _mm256_permute_ps(m, _MM_SHUFFLE(1, 0, 3, 2)));
+                m = _mm256_min_ps(m, _mm256_permute_ps(m, _MM_SHUFFLE(2, 3, 0, 1)));
+
+                t_min =  _mm256_cvtss_f32(m);
+                ps_t_min = _mm256_set1_ps(t_min);
+
+                __m256 nearest_mask = _mm256_cmp_ps(candidates, ps_t_min, _CMP_EQ_OQ);
+
+                int lane = __builtin_ctz(_mm256_movemask_ps(nearest_mask));
+                best_idx = bvh->nodes[idx].idx[i] + lane;
+
+                __m256i lane_idx = _mm256_set1_epi32(lane);
+
+                u = _mm256_cvtss_f32(_mm256_permutevar8x32_ps(info.u, lane_idx));
+                v = _mm256_cvtss_f32(_mm256_permutevar8x32_ps(info.v, lane_idx));             
             }
         }
 
@@ -187,7 +202,7 @@ HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials) {
 
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles, &info);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], &packed_ray, &bvh->runtime_triangles, &info);
 
             _mm256_storeu_ps(t_values, ps_t_triangle);
             _mm256_storeu_ps(u_values, info.u);
@@ -257,7 +272,7 @@ int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
         for (int i = bvh->nodes[idx].internal_count; i < bvh->nodes[idx].internal_count + bvh->nodes[idx].leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
 
-            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], bvh->nodes[idx].primitive_count[i], &packed_ray, &bvh->runtime_triangles, &info);
+            ps_t_triangle = packed_triangle_ray_intersection(bvh->nodes[idx].idx[i], &packed_ray, &bvh->runtime_triangles, &info);
             _mm256_storeu_ps(t_values, ps_t_triangle);
 
             for (int lane = 0; lane < bvh->nodes[idx].primitive_count[i]; lane++) {
@@ -276,3 +291,49 @@ int is_shaded_by_object(Ray *ray, BVH8Tree *bvh) {
 
     return 0;
 }
+
+
+
+        // uint32_t leaf_begin = bvh->nodes[idx].internal_count;
+        // uint32_t leaf_end = leaf_begin + bvh->nodes[idx].leaf_count;
+
+        // for (uint32_t i = leaf_begin; i < leaf_end;) {
+        //     if (!(valid_mask & (1u << i))) {
+        //         i++;
+        //         continue;
+        //     }
+
+        //     uint32_t start = bvh->nodes[idx].idx[i];
+        //     uint32_t count = bvh->nodes[idx].primitive_count[i];
+        //     i++;
+
+        //     while (i < leaf_end && (valid_mask & (1u << i))) {
+        //         count += bvh->nodes[idx].primitive_count[i];
+        //         i++;
+        //     }
+
+        //     while (count > 0) {
+        //         uint32_t len = count < 8 ? count : 8;
+
+        //         ps_t_triangle = packed_triangle_ray_intersection(start, len, &packed_ray, &bvh->runtime_triangles, &info);
+        //         triangle_test++;
+
+        //         _mm256_storeu_ps(t_values, ps_t_triangle);
+        //         _mm256_storeu_ps(u_values, info.u);
+        //         _mm256_storeu_ps(v_values, info.v);
+
+        //         for (int lane = 0; lane < len; lane++) {
+        //             if (t_values[lane] >= EPSILON && t_values[lane] < t_min) {
+        //                 t_min = t_values[lane];
+        //                 u = u_values[lane];
+        //                 v = v_values[lane];
+        //                 ps_t_min = _mm256_set1_ps(t_min);
+        //                 best_idx = start + lane;
+        //             }
+        //         }
+
+        //         start += len;
+        //         count -= len;
+
+        //     }
+        // }

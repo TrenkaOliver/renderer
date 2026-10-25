@@ -6,6 +6,7 @@
 #include "light/material.h"
 #include "scene/scene.h"
 #include "camera/camera.h"
+#include "accel/bvh.h"
 #include "math/vec.h"
 
 
@@ -209,8 +210,8 @@ int create_import_scene(void) {
     rotate_mesh(&scene, mesh0, vec(0.0, 3.14, 2.0));
     rotate_mesh(&scene, mesh1, vec(0.0, 3.14, -1.7));
     
-    move_mesh(&scene, mesh0, vec(0.0, 0.0, 0.0));
-    move_mesh(&scene, mesh1, vec(0.0, 0.0, 0.0));
+    move_mesh(&scene, mesh0, vec(1.0, 0.0, 0.0));
+    move_mesh(&scene, mesh1, vec(-1.0, 1.0, 0.0));
 
     Vec pos0 = ((Mesh *)get_element(0, &scene.meshes))->position;
     Vec pos1 = ((Mesh *)get_element(1, &scene.meshes))->position;
@@ -218,7 +219,7 @@ int create_import_scene(void) {
     printf("%u\n", scene.triangle_count);
 
     Camera cam = create_look_at_camera(
-        v_add(scale(v_add(pos0, pos1), 0.5), vec(0.0, -1.5, 0.0)),
+        v_add(scale(v_add(pos0, pos1), 0.5), vec(0.0, -3.0, 0.0)),
         scale(v_add(pos0, pos1), 0.5),
         1.0472
     );
@@ -237,9 +238,25 @@ int create_import_scene(void) {
 
     clock_t end = clock();
 
-    printf("Scene creation: %.3f s\n", (double)(end - start) / CLOCKS_PER_SEC);
+    clock_t bvh_start = clock();
+    BVH8Tree bvh = create_bvh8_tree(&scene.triangles, scene.vertex_data, scene.triangle_count);
+    clock_t bvh_end = clock();
 
-    render(f, &scene, &cam, &settings);
+    printf("Bvh creation: %.3f s\n", (double)(bvh_end - bvh_start) / CLOCKS_PER_SEC);
+
+    clock_t render_start = clock();
+
+    for (int i = 0; i < 1; i++) {
+        render(f, &scene, &cam, &settings, &bvh);
+    }
+
+    clock_t render_end = clock();
+
+    printf("Total render time: %.3f s\n",
+        (double)(render_end - render_start) / CLOCKS_PER_SEC);
+
+    printf("Average render time: %.3f s\n",
+        (double)(render_end - render_start) / CLOCKS_PER_SEC / 1.0);
 
     fclose(f);
 

@@ -1,5 +1,6 @@
 CC = gcc
 
+# CFLAGS = -g -O3 -fno-omit-frame-pointer -mavx2 -mfma -Wall -Wextra -Ithird_party/json -Ithird_party/image -Iinclude
 CFLAGS = -Wall -Wextra -Iinclude -Ithird_party/json -Ithird_party/image -MMD -MP -g -O3 -mavx2 -mfma -flto=16 -ffast-math -fno-omit-frame-pointer
 
 LDLIBS = -lm
@@ -22,6 +23,7 @@ SRC = \
 	src/light/material.c \
 	src/math/vec.c \
 	src/math/ray.c \
+	src/math/packed_ray.c \
 	src/render/pixel.c \
 	src/render/render.c \
 	src/render/trace.c \

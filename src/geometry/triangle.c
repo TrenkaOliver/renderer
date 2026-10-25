@@ -6,28 +6,27 @@
 
 #define EPSILON 1e-4
 
-__m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info) {
+__m256 packed_triangle_ray_intersection(uint32_t idx, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info) {
     ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 2 + idx)
     };
-    ps_Vec ao = ps_v_sub(ray->o, a);
-
-    ps_Vec b = (ps_Vec){
+    
+    ps_Vec ab = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + array->offset * 3 + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset * 4 + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 5 + idx)
-    };    
-    ps_Vec ab = ps_v_sub(b, a);
-
-    ps_Vec c = (ps_Vec){
+    };
+    
+    ps_Vec ac = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + array->offset * 6 + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset * 7 + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 8 + idx)
     };
-    ps_Vec ac = ps_v_sub(c, a);
-
+    
+    ps_Vec ao = ps_v_sub(ray->o, a);
+    
     ps_Vec cross_ao_ab = ps_cross(ao, ab);
     ps_Vec cross_ray_v_ac = ps_cross(ray->v, ac);
     
@@ -35,9 +34,13 @@ __m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *
     __m256 one = _mm256_set1_ps(1.0f);
 
     __m256 denom = ps_dot(ab, cross_ray_v_ac);
-    __m256 inv_denom = _mm256_div_ps(one, denom);
-    __m256 valid = _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.0f), denom), _mm256_set1_ps(EPSILON), _CMP_GE_OQ);
+    __m256 inv_denom = _mm256_rcp_ps(denom);
+    
+    __m256 _eps = _mm256_set1_ps(EPSILON);
+    __m256 _negzero = _mm256_set1_ps(-0.0f);
 
+    __m256 valid = _mm256_cmp_ps(_mm256_andnot_ps(_negzero, denom), _eps, _CMP_GE_OQ);
+    
     __m256 u = _mm256_mul_ps(ps_dot(ao, cross_ray_v_ac), inv_denom);
     valid = _mm256_and_ps(valid, _mm256_cmp_ps(u, zero, _CMP_GE_OQ));
 
@@ -45,20 +48,6 @@ __m256 packed_triangle_ray_intersection(uint32_t idx, uint8_t count, PackedRay *
     valid = _mm256_and_ps(valid, _mm256_cmp_ps(v, zero, _CMP_GE_OQ));
 
     valid = _mm256_and_ps(valid, _mm256_cmp_ps(_mm256_add_ps(u, v), one, _CMP_LE_OQ));
-    valid = _mm256_and_ps(valid, 
-        _mm256_castsi256_ps(
-            _mm256_set_epi32(
-                count > 7 ? -1 : 0,
-                count > 6 ? -1 : 0,
-                count > 5 ? -1 : 0,
-                count > 4 ? -1 : 0,
-                count > 3 ? -1 : 0,
-                count > 2 ? -1 : 0,
-                count > 1 ? -1 : 0,
-                count > 0 ? -1 : 0
-            )
-        )
-    );
 
     __m256 t = _mm256_mul_ps(ps_dot(ac, cross_ao_ab), inv_denom);
 
@@ -266,6 +255,22 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
     float ncy[8];
     float ncz[8];
 
+    float d_u[8];
+    float d_v[8];
+
+    float ax[8];
+    float ay[8];
+    float az[8];
+
+    float bx[8];
+    float by[8];
+    float bz[8];
+
+    float cx[8];
+    float cy[8];
+    float cz[8];
+
+    __m256 w = _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_add_ps(u, v));
 
     for (int i = 0; i < 8; i++) {
         if (t_arr[i] != -1.0f) {
@@ -288,6 +293,21 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
             ncx[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 0];
             ncy[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 1];
             ncz[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 2];
+
+            d_u[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 0] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 0] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 0] * v[i];
+            d_v[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 1] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 1] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 1] * v[i];
+
+            ax[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 0];
+            ay[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 1];
+            az[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 2];
+
+            bx[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 0];
+            by[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 1];
+            bz[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 2];
+
+            cx[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 0];
+            cy[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 1];
+            cz[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 2];
         } else {
             indices[i] = 0;
 
@@ -308,6 +328,21 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
             ncx[i] = 0.0f;
             ncy[i] = 0.0f;
             ncz[i] = 0.0f;
+
+            d_u[i] = NAN;
+            d_v[i] = NAN;
+
+            ax[i] = 0.0f;
+            ay[i] = 0.0f;
+            az[i] = 0.0f;
+
+            bx[i] = 0.0f;
+            by[i] = 0.0f;
+            bz[i] = 0.0f;
+
+            cx[i] = 0.0f;
+            cy[i] = 0.0f;
+            cz[i] = 0.0f;
         }
     }
 
@@ -335,58 +370,7 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
         .z = _mm256_loadu_ps(ncz)
     };
 
-    __m256 w = _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_add_ps(u, v));
-
     ps_Vec ns = ps_normalize(ps_v_add(ps_v_add(ps_scale_ps(na, w), ps_scale_ps(nb, u)), ps_scale_ps(nc, v)));
-
-    float d_u[8];
-    float d_v[8];
-
-    float ax[8];
-    float ay[8];
-    float az[8];
-
-    float bx[8];
-    float by[8];
-    float bz[8];
-
-    float cx[8];
-    float cy[8];
-    float cz[8];
-
-    for (int i = 0; i < 8; i++) {
-        if (t_arr[i] != -1.0f) {
-            d_u[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 0] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 0] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 0] * v[i];
-            d_v[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 1] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 1] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 1] * v[i];
-
-            ax[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 0];
-            ay[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 1];
-            az[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 2];
-
-            bx[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 0];
-            by[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 1];
-            bz[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 2];
-
-            cx[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 0];
-            cy[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 1];
-            cz[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 2];
-        } else {
-            d_u[i] = NAN;
-            d_v[i] = NAN;
-
-            ax[i] = 0.0f;
-            ay[i] = 0.0f;
-            az[i] = 0.0f;
-
-            bx[i] = 0.0f;
-            by[i] = 0.0f;
-            bz[i] = 0.0f;
-
-            cx[i] = 0.0f;
-            cy[i] = 0.0f;
-            cz[i] = 0.0f;
-        }
-    }
 
     ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(ax),
@@ -432,6 +416,7 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
     };
 
     __m256 D = _mm256_sub_ps(_mm256_mul_ps(uv_ab[0], uv_ac[1]), _mm256_mul_ps(uv_ab[1], uv_ac[0]));
+    __m256 rcp_D = _mm256_rcp_ps(D);
 
     __m256 valid_tangent = _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.0f), D), _mm256_set1_ps(EPSILON), _CMP_GT_OQ);
 
@@ -442,7 +427,8 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
             ps_scale_ps(ab, uv_ac[1]),
             ps_scale_ps(ac, uv_ab[1])
         ),
-        _mm256_div_ps(_mm256_set1_ps(1.0f), D)
+        // _mm256_div_ps(_mm256_set1_ps(1.0f), D)
+        rcp_D
     );
 
     ps_Vec bitangent = ps_scale_ps(
@@ -450,7 +436,8 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
             ps_scale_ps(ac, uv_ab[0]),
             ps_scale_ps(ab, uv_ac[0])
         ),
-        _mm256_div_ps(_mm256_set1_ps(1.0f), D)
+        // _mm256_div_ps(_mm256_set1_ps(1.0f), D)
+        rcp_D
     );
 
     //maybe zero out tangent and bitangent if valid_tangent is false
