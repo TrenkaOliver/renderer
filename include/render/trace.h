@@ -9,6 +9,12 @@
 #include "camera/camera.h"
 #include "accel/bvh.h"
 
+typedef struct TraceResult {
+    ps_Vec c;
+    __m256 ref_str;
+    __m256 valid_ref;
+} TraceResult;
+
 HitResult get_first_plane(Ray *ray, DynArray *planes);
 int is_shaded_by_plane(Ray *ray, DynArray *planes);
 
@@ -20,6 +26,6 @@ HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh);
 int is_shaded(Ray *ray, Scene *scene, BVH8Tree *bvh);
 
 Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth);
-ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, int depth);
+TraceResult packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, __m256i depth);
 
 #endif

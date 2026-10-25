@@ -226,7 +226,10 @@ ps_Vec read_map(Texture *map[8], __m256 u, __m256 v, int stride)
     };
 }
 
-ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
+
+
+
+TraceResult packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, __m256i depth) {
     PackedHitResult hit = packed_get_first_object(ray, bvh, &scene->materials, &scene->textures);
     
     // return (ps_Vec) {
@@ -464,66 +467,104 @@ ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, in
 
     ps_Vec c_specular_ibl = ps_hadamard(c_prefiltered, specular_factor);
 
-    //ignore recursive reflections for now
-    ps_Vec c_reflection_or_specular_ibl = c_specular_ibl;
-
     __m256 valid_roughness_mask = _mm256_cmp_ps(roughness, _mm256_set1_ps(0.2f), _CMP_LE_OQ);
     __m256 valid_metallic_mask = _mm256_cmp_ps(metallic, _mm256_set1_ps(0.5f), _CMP_GE_OQ);
+    __m256i valid_depth = _mm256_cmpgt_epi32(_mm256_set1_epi32(2), depth);
 
-    __m256 valid_reflection = _mm256_and_ps(hit.valid_hit, _mm256_and_ps(valid_roughness_mask, valid_metallic_mask));
+    __m256 valid_reflection = _mm256_and_ps(_mm256_and_ps(hit.valid_hit, _mm256_castsi256_ps(valid_depth)), _mm256_and_ps(valid_roughness_mask, valid_metallic_mask));
 
-    int valid_roughness = _mm256_movemask_ps(valid_roughness_mask);
-    int valid_metallic = _mm256_movemask_ps(valid_metallic_mask);
-    int valid_hit = _mm256_movemask_ps(hit.valid_hit);
+    __m256 one_minus_roughness = _mm256_sub_ps(_f1, roughness);
 
+    __m256 o_m_r_valid = _mm256_blendv_ps(_f0, one_minus_roughness, valid_reflection);
 
-    if (depth > 0 && valid_roughness && valid_metallic && valid_hit) {
-        double sd_u, sd_v;
-        hammersley(0, 1, &sd_u, &sd_v);
-        __m256 u = _mm256_set1_ps(sd_u);
-        __m256 v = _mm256_set1_ps(sd_v);
+    __m256 reflection_strenght = _mm256_mul_ps(o_m_r_valid, o_m_r_valid);
+    __m256 one_minus_ref_str = _mm256_sub_ps(_f1, reflection_strenght);
 
-        ps_Vec H = packed_importance_sample_GGX(u, v, alpha2, N);
+    c_specular_ibl = ps_scale_ps(c_specular_ibl, one_minus_ref_str);
 
-        ps_Vec reflection_dir = ps_normalize(
-            ps_v_sub(
-                ps_scale_ps(H, _mm256_mul_ps(_f2, VdotH)),
-                V
-            )
-        );
+    ps_Vec Hr = packed_importance_sample_GGX(_f0, _f0, alpha2, N);
 
-        ps_Vec O = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
-        
-        float dx[8], dy[8], dz[8], ox[8], oy[8], oz[8];
-        _mm256_storeu_ps(dx, reflection_dir.x);
-        _mm256_storeu_ps(dy, reflection_dir.y);
-        _mm256_storeu_ps(dz, reflection_dir.z);
-        _mm256_storeu_ps(ox, O.x);
-        _mm256_storeu_ps(oy, O.y);
-        _mm256_storeu_ps(oz, O.z);
+    ps_Vec reflection_dir = ps_normalize(
+        ps_v_sub(
+            ps_scale_ps(Hr, _mm256_mul_ps(_f2, VdotH)),
+            V
+        )
+    );
 
-        for (int i = 0; i < 8; i++) {
-            ray[i] = create_ray(vec(ox[i], oy[i], oz[i]), vec(dx[i], dy[i], dz[i]));
-        }
+    ps_Vec O = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
 
-        ps_Vec c_reflected = packed_trace_ray(ray, scene, cam, bvh, depth - 1);
+    float dx[8], dy[8], dz[8], ox[8], oy[8], oz[8];
+    _mm256_storeu_ps(dx, reflection_dir.x);
+    _mm256_storeu_ps(dy, reflection_dir.y);
+    _mm256_storeu_ps(dz, reflection_dir.z);
+    _mm256_storeu_ps(ox, O.x);
+    _mm256_storeu_ps(oy, O.y);
+    _mm256_storeu_ps(oz, O.z);
 
-        __m256 one_minus_roughness = _mm256_sub_ps(_f1, roughness);
-        __m256 reflection_strenght = _mm256_mul_ps(one_minus_roughness, one_minus_roughness);
-        __m256 one_minus_ref_str = _mm256_sub_ps(_f1, reflection_strenght);
-
-        ps_Vec reflected_scale = ps_scale_ps(c_reflected, reflection_strenght);
-        ps_Vec specular_scale = ps_scale_ps(c_specular_ibl, one_minus_ref_str);
-
-        c_reflection_or_specular_ibl = ps_v_add(reflected_scale, specular_scale);
-
-        c_reflection_or_specular_ibl = ps_hadamard(f_reflection, c_reflection_or_specular_ibl);
-
-        c_reflection_or_specular_ibl.x = _mm256_blendv_ps(c_specular_ibl.x, c_reflection_or_specular_ibl.x, valid_reflection);
-        c_reflection_or_specular_ibl.y = _mm256_blendv_ps(c_specular_ibl.y, c_reflection_or_specular_ibl.y, valid_reflection);
-        c_reflection_or_specular_ibl.z = _mm256_blendv_ps(c_specular_ibl.z, c_reflection_or_specular_ibl.z, valid_reflection);
-
+    for (int i = 0; i < 8; i++) {
+        ray[i] = create_ray(vec(ox[i], oy[i], oz[i]), vec(dx[i], dy[i], dz[i]));
     }
+
+    //ignore recursive reflections for now
+    // ps_Vec c_reflection_or_specular_ibl = c_specular_ibl;
+
+    // __m256 valid_roughness_mask = _mm256_cmp_ps(roughness, _mm256_set1_ps(0.2f), _CMP_LE_OQ);
+    // __m256 valid_metallic_mask = _mm256_cmp_ps(metallic, _mm256_set1_ps(0.5f), _CMP_GE_OQ);
+
+    // __m256 valid_reflection = _mm256_and_ps(hit.valid_hit, _mm256_and_ps(valid_roughness_mask, valid_metallic_mask));
+
+    // int valid_roughness = _mm256_movemask_ps(valid_roughness_mask);
+    // int valid_metallic = _mm256_movemask_ps(valid_metallic_mask);
+    // int valid_hit = _mm256_movemask_ps(hit.valid_hit);
+
+
+    // if (depth > 0 && valid_roughness && valid_metallic && valid_hit) {
+    //     double sd_u, sd_v;
+    //     hammersley(0, 1, &sd_u, &sd_v);
+    //     __m256 u = _mm256_set1_ps(sd_u);
+    //     __m256 v = _mm256_set1_ps(sd_v);
+
+    //     ps_Vec H = packed_importance_sample_GGX(u, v, alpha2, N);
+
+    //     ps_Vec reflection_dir = ps_normalize(
+    //         ps_v_sub(
+    //             ps_scale_ps(H, _mm256_mul_ps(_f2, VdotH)),
+    //             V
+    //         )
+    //     );
+
+    //     ps_Vec O = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
+        
+    //     float dx[8], dy[8], dz[8], ox[8], oy[8], oz[8];
+    //     _mm256_storeu_ps(dx, reflection_dir.x);
+    //     _mm256_storeu_ps(dy, reflection_dir.y);
+    //     _mm256_storeu_ps(dz, reflection_dir.z);
+    //     _mm256_storeu_ps(ox, O.x);
+    //     _mm256_storeu_ps(oy, O.y);
+    //     _mm256_storeu_ps(oz, O.z);
+
+    //     for (int i = 0; i < 8; i++) {
+    //         ray[i] = create_ray(vec(ox[i], oy[i], oz[i]), vec(dx[i], dy[i], dz[i]));
+    //     }
+
+    //     ps_Vec c_reflected = packed_trace_ray(ray, scene, cam, bvh, depth - 1);
+
+    //     __m256 one_minus_roughness = _mm256_sub_ps(_f1, roughness);
+    //     __m256 reflection_strenght = _mm256_mul_ps(one_minus_roughness, one_minus_roughness);
+    //     __m256 one_minus_ref_str = _mm256_sub_ps(_f1, reflection_strenght);
+
+    //     ps_Vec reflected_scale = ps_scale_ps(c_reflected, reflection_strenght);
+    //     ps_Vec specular_scale = ps_scale_ps(c_specular_ibl, one_minus_ref_str);
+
+    //     c_reflection_or_specular_ibl = ps_v_add(reflected_scale, specular_scale);
+
+    //     c_reflection_or_specular_ibl = ps_hadamard(f_reflection, c_reflection_or_specular_ibl);
+
+    //     c_reflection_or_specular_ibl.x = _mm256_blendv_ps(c_specular_ibl.x, c_reflection_or_specular_ibl.x, valid_reflection);
+    //     c_reflection_or_specular_ibl.y = _mm256_blendv_ps(c_specular_ibl.y, c_reflection_or_specular_ibl.y, valid_reflection);
+    //     c_reflection_or_specular_ibl.z = _mm256_blendv_ps(c_specular_ibl.z, c_reflection_or_specular_ibl.z, valid_reflection);
+
+    // }
 
 
     ps_Vec c = {
@@ -534,8 +575,8 @@ ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, in
 
     c = ps_v_add(c, c_diffuse);
     c = ps_v_add(c, c_diffuse_ibl);
-    c = ps_v_add(c, c_reflection_or_specular_ibl);
     c = ps_v_add(c, c_specular);
+    c = ps_v_add(c, c_specular_ibl);
     c = ps_v_add(c, c_emissive);
 
     ps_Vec out =  {
@@ -544,7 +585,11 @@ ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, in
         .z = _mm256_blendv_ps(res.z, c.z, hit.valid_hit),
     };
 
-    return out;
+    return (TraceResult) {
+        .c = out,
+        .ref_str = reflection_strenght,
+        .valid_ref = valid_reflection
+    };
 }
 
 Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {

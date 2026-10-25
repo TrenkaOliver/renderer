@@ -158,14 +158,14 @@ static double random_double(double min, double max)
 //     .splecular_map = (size_t)-1,
 // };
 
-// #define WIDTH 3840
-// #define HEIGHT 2160
+#define WIDTH 3840
+#define HEIGHT 2160
 
 // #define WIDTH 1920
 // #define HEIGHT 1080
 
-#define WIDTH 640
-#define HEIGHT 360
+// #define WIDTH 640
+// #define HEIGHT 360
 
 #define AA 1
 #define MAX_DEPTH 2
@@ -203,7 +203,7 @@ int create_import_scene(void) {
     //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
-    import_env(&scene, "./glTF/env/hangar.hdr");
+    import_env(&scene, "./glTF/env/sky.hdr");
 
     Mesh *mesh0 = (Mesh *)get_element(0, &scene.meshes);
     Mesh *mesh1 = (Mesh *)get_element(1, &scene.meshes);
