@@ -481,6 +481,7 @@ TraceResult packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bv
     __m256 one_minus_ref_str = _mm256_sub_ps(_f1, reflection_strenght);
 
     c_specular_ibl = ps_scale_ps(c_specular_ibl, one_minus_ref_str);
+    c_specular_ibl = ps_hadamard(f_reflection, c_specular_ibl);
 
     ps_Vec Hr = packed_importance_sample_GGX(_f0, _f0, alpha2, N);
 
@@ -587,7 +588,7 @@ TraceResult packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bv
 
     return (TraceResult) {
         .c = out,
-        .ref_str = reflection_strenght,
+        .ref_mul = ps_scale_ps(f_reflection, reflection_strenght),
         .valid_ref = valid_reflection
     };
 }

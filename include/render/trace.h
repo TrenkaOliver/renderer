@@ -11,7 +11,7 @@
 
 typedef struct TraceResult {
     ps_Vec c;
-    __m256 ref_str;
+    ps_Vec ref_mul;
     __m256 valid_ref;
 } TraceResult;
 

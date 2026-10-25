@@ -52,7 +52,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tre
         __m256i ps_depth = _mm256_setzero_si256();
         Ray ray[8];
         ps_Vec c[2];
-        __m256 str[2];
+        ps_Vec mul[2];
 
         c[0] = (ps_Vec){
             .x = _mm256_setzero_ps(),
@@ -64,9 +64,16 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tre
             .y = _mm256_setzero_ps(),
             .z = _mm256_setzero_ps()
         };
-
-        str[0] = _mm256_setzero_ps();
-        str[1] = _mm256_setzero_ps();
+        mul[0] = (ps_Vec){
+            .x = _mm256_setzero_ps(),
+            .y = _mm256_setzero_ps(),
+            .z = _mm256_setzero_ps()
+        };
+        mul[1] = (ps_Vec){
+            .x = _mm256_setzero_ps(),
+            .y = _mm256_setzero_ps(),
+            .z = _mm256_setzero_ps()
+        };
 
         for (int k = 0; k < 8; k++) {
             right = (-1.0 + (k + 0.5) * inv_width * 2.0) * x_scale;
@@ -95,22 +102,36 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tre
             c[1].x = _mm256_blendv_ps(c[1].x, res.c.x, depth1);
             c[1].y = _mm256_blendv_ps(c[1].y, res.c.y, depth1);
             c[1].z = _mm256_blendv_ps(c[1].z, res.c.z, depth1);
-            str[1] = _mm256_blendv_ps(str[1], res.ref_str, _mm256_and_ps(depth1, res.valid_ref));
+            __m256 blend_mul1 = _mm256_and_ps(depth1, res.valid_ref);
+            mul[1].x = _mm256_blendv_ps(mul[1].x, res.ref_mul.x, blend_mul1);
+            mul[1].y = _mm256_blendv_ps(mul[1].y, res.ref_mul.y, blend_mul1);
+            mul[1].z = _mm256_blendv_ps(mul[1].z, res.ref_mul.z, blend_mul1);
 
             c[0].x = _mm256_blendv_ps(c[0].x, res.c.x, depth0);
             c[0].y = _mm256_blendv_ps(c[0].y, res.c.y, depth0);
             c[0].z = _mm256_blendv_ps(c[0].z, res.c.z, depth0);
-            str[0] = _mm256_blendv_ps(str[0], res.ref_str, _mm256_and_ps(depth0, res.valid_ref));
+            __m256 blend_mul0 = _mm256_and_ps(depth0, res.valid_ref);
+            mul[0].x = _mm256_blendv_ps(mul[0].x, res.ref_mul.x, blend_mul0);
+            mul[0].y = _mm256_blendv_ps(mul[0].y, res.ref_mul.y, blend_mul0);
+            mul[0].z = _mm256_blendv_ps(mul[0].z, res.ref_mul.z, blend_mul0);
 
-            c[1] = ps_v_add(c[1], ps_scale_ps(
+            c[1] = ps_v_add(c[1], ps_hadamard(
                 res.c,
-                _mm256_blendv_ps(_mm256_setzero_ps(), str[1], depth2)
+                (ps_Vec) {
+                    .x = _mm256_blendv_ps(_mm256_setzero_ps(), mul[1].x, depth2),
+                    .y = _mm256_blendv_ps(_mm256_setzero_ps(), mul[1].y, depth2),
+                    .z = _mm256_blendv_ps(_mm256_setzero_ps(), mul[1].z, depth2),
+                }
             ));
             
             __m256 accum_c0 = _mm256_and_ps(not0, not_valid);
-            c[0] = ps_v_add(c[0], ps_scale_ps(
+            c[0] = ps_v_add(c[0], ps_hadamard(
                 c[1],
-                _mm256_blendv_ps(_mm256_setzero_ps(), str[0], accum_c0)
+                (ps_Vec) {
+                    .x = _mm256_blendv_ps(_mm256_setzero_ps(), mul[0].x, accum_c0),
+                    .y = _mm256_blendv_ps(_mm256_setzero_ps(), mul[0].y, accum_c0),
+                    .z = _mm256_blendv_ps(_mm256_setzero_ps(), mul[0].z, accum_c0),
+                }
             ));
 
             __m256 load_new = _mm256_or_ps(depth2, _mm256_andnot_ps(res.valid_ref, _mm256_or_ps(depth0, depth1)));
