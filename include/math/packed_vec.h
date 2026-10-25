@@ -58,11 +58,10 @@ static inline ps_Vec ps_neg(ps_Vec vec) {
 }
 
 static inline ps_Vec ps_reciprocal(ps_Vec vec) {
-    __m256 dividend = _mm256_set1_ps(1.0f);
     return (ps_Vec) {
-        .x = _mm256_div_ps(dividend, vec.x),
-        .y = _mm256_div_ps(dividend, vec.y),
-        .z = _mm256_div_ps(dividend, vec.z),
+        .x = _mm256_rcp_ps(vec.x),
+        .y = _mm256_rcp_ps(vec.y),
+        .z = _mm256_rcp_ps(vec.z),
     };
 }
 

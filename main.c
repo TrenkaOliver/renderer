@@ -157,8 +157,8 @@ static double random_double(double min, double max)
 //     .splecular_map = (size_t)-1,
 // };
 
-#define WIDTH 3840
-#define HEIGHT 2160
+#define WIDTH 640
+#define HEIGHT 360
 
 // #define WIDTH 1920
 // #define HEIGHT 1080

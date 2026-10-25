@@ -313,41 +313,32 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
 
     Vec c_reflection_or_specular_ibl;
 
-    if (depth > 0 && roughness < 0.2 && metallic > 0.5) {
-        Vec c_reflected = vec(0.0, 0.0, 0.0);
+    if (depth > 0 && roughness < 0.2f && metallic > 0.5f) {
 
-        int sample_count = 1;
+        double u, v;
+        hammersley(0, 1, &u, &v);
 
-        for (int i = 0; i < sample_count; i++) {
-            double u, v;
-            hammersley(i, sample_count, &u, &v);
-    
-            Vec H = importance_sample_GGX(u, v, roughness, N);
-    
-            Vec reflection_dir = normalize(
-                v_sub(
-                    scale(H, 2.0 * dot(V, H)),
-                    V
-                )
-            );
-    
-            Ray reflection_ray = create_ray(
-                v_add(hit.point, scale(hit.ng, EPSILON)),
-                reflection_dir
-            );
-    
-            Vec sample = trace_ray(
-                &reflection_ray,
-                scene,
-                cam,
-                bvh,
-                depth - 1
-            );
+        Vec H = importance_sample_GGX(u, v, roughness, N);
 
-            c_reflected = v_add(c_reflected, sample);
-        }
+        Vec reflection_dir = normalize(
+            v_sub(
+                scale(H, 2.0 * dot(V, H)),
+                V
+            )
+        );
 
-        c_reflected = scale(c_reflected, 1.0 / sample_count);
+        Ray reflection_ray = create_ray(
+            v_add(hit.point, scale(hit.ng, EPSILON)),
+            reflection_dir
+        );
+
+        Vec c_reflected = trace_ray(
+            &reflection_ray,
+            scene,
+            cam,
+            bvh,
+            depth - 1
+        );
 
         double reflection_strenght = (1.0 - roughness) * (1.0 - roughness);
 
@@ -365,17 +356,8 @@ Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
         c_reflection_or_specular_ibl = c_specular_ibl;
     }
 
-
-    Ray shadow_ray = create_ray(
-        v_add(hit.point, scale(hit.ng, EPSILON)),
-        L
-    );
-
     Vec c = vec(0.0, 0.0, 0.0);
 
-    if (!is_shaded(&shadow_ray, scene, bvh)) {
-
-    }
 
     c = v_add(c, c_diffuse);
     c = v_add(c, c_diffuse_ibl);
