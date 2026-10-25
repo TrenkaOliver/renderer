@@ -73,7 +73,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings) {
                         ))
                     );
 
-                    c = v_add(c, scale(trace_ray(&ray, scene, cam, &bvh, settings->max_depth), color_scale));
+                    c = v_add(c, scale(trace_ray(&ray, scene, cam, &bvh, settings->max_depth, j, i), color_scale));
                 }
             }
             p = color_to_pixel(c);

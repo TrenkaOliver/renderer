@@ -1,7 +1,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define EPSILON 1e-4
+#define EPSILON 1e-3
 
 #include "geometry/object.h"
 #include "geometry/hit.h"
@@ -18,6 +18,6 @@ int is_shaded_by_object(Ray *ray, BVH8Tree *bvh);
 HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh);
 int is_shaded(Ray *ray, Scene *scene, BVH8Tree *bvh);
 
-Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth);
+Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth, int debug_x, int debug_y);
 
 #endif
