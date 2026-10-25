@@ -203,7 +203,7 @@ int create_import_scene(void) {
     //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
-    import_env(&scene, "./glTF/env/grass.hdr");
+    import_env(&scene, "./glTF/env/sky.hdr");
 
     Mesh *mesh0 = (Mesh *)get_element(0, &scene.meshes);
     Mesh *mesh1 = (Mesh *)get_element(1, &scene.meshes);

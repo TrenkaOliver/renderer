@@ -1,7 +1,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define EPSILON 1e-4
+#define EPSILON 1e-3
 
 #include "geometry/object.h"
 #include "geometry/hit.h"
