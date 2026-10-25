@@ -71,7 +71,7 @@ int render(FILE *f, Scene *scene, Camera *cam, RenderSettings *settings, BVH8Tre
                 }
             }
 
-            ps_Vec c = packed_trace_ray(ray, scene, cam, bvh, settings->max_depth);
+            ps_Vec c = packed_trace_ray(ray, scene, cam, bvh, settings->max_depth, 0xFF);
 
             PackedPixel p = color_to_packed_pixel(c);
             for (int k = 0; k < 8; k++) {

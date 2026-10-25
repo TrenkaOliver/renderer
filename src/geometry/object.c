@@ -22,7 +22,7 @@ static inline void move_near_fw(uint32_t idx[], float t[], int count) {
 
 ScalarHitResult scalar_get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials);
 
-PackedHitResult packed_get_first_object(Ray ray[8], BVH8Tree *bvh, DynArray *materials, DynArray *textures) {
+PackedHitResult packed_get_first_object(Ray ray[8], BVH8Tree *bvh, DynArray *materials, DynArray *textures, int valid_lanes) {
     ScalarHitResult res;
     float t[8];
     float u[8];
@@ -30,11 +30,15 @@ PackedHitResult packed_get_first_object(Ray ray[8], BVH8Tree *bvh, DynArray *mat
     uint32_t indices[8];
     
     for (int i = 0; i < 8; i++) {
-        res = scalar_get_first_object(ray + i, bvh, materials);
-        t[i] = res.t;
-        u[i] = res.u;
-        v[i] = res.v;
-        indices[i] = res.idx;
+        if (valid_lanes & (1u << i)) {
+            res = scalar_get_first_object(ray + i, bvh, materials);
+            t[i] = res.t;
+            u[i] = res.u;
+            v[i] = res.v;
+            indices[i] = res.idx;
+        } else {
+            t[i] = -1.0f;
+        }
     }
 
     PackedRay packed_ray = {

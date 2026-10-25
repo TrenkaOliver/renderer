@@ -226,8 +226,8 @@ ps_Vec read_map(Texture *map[8], __m256 u, __m256 v, int stride)
     };
 }
 
-ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, int depth) {
-    PackedHitResult hit = packed_get_first_object(ray, bvh, &scene->materials, &scene->textures);
+ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, int depth, int valid_lanes) {
+    PackedHitResult hit = packed_get_first_object(ray, bvh, &scene->materials, &scene->textures, valid_lanes);
     
     // return (ps_Vec) {
     //     hit.t,
@@ -476,8 +476,9 @@ ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, in
     int valid_metallic = _mm256_movemask_ps(valid_metallic_mask);
     int valid_hit = _mm256_movemask_ps(hit.valid_hit);
 
+    int valid = valid_roughness & valid_metallic & valid_hit & valid_lanes;
 
-    if (depth > 0 && valid_roughness && valid_metallic && valid_hit) {
+    if (depth > 0 && valid) {
         double sd_u, sd_v;
         hammersley(0, 1, &sd_u, &sd_v);
         __m256 u = _mm256_set1_ps(sd_u);
@@ -506,7 +507,7 @@ ps_Vec packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, in
             ray[i] = create_ray(vec(ox[i], oy[i], oz[i]), vec(dx[i], dy[i], dz[i]));
         }
 
-        ps_Vec c_reflected = packed_trace_ray(ray, scene, cam, bvh, depth - 1);
+        ps_Vec c_reflected = packed_trace_ray(ray, scene, cam, bvh, depth - 1, valid);
 
         __m256 one_minus_roughness = _mm256_sub_ps(_f1, roughness);
         __m256 reflection_strenght = _mm256_mul_ps(one_minus_roughness, one_minus_roughness);
