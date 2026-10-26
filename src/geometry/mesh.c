@@ -71,172 +71,6 @@ size_t import_texture(char *line, char *mtl_path, Scene *scene) {
     return i;
 }
 
-size_t import_obj_mesh(Scene *scene, char *file_name) {
-    // FILE *f = fopen(file_name, "r");
-
-    // Material *active_material = NULL;
-    // uint32_t active_material_id = 0;
-    // DynArray m_idx = create_dyn_array(sizeof(MaterialEntry), 16);
-
-    // uint32_t out = grow_dyn_array(&scene->meshes);
-    // Mesh *mesh = get_element(out, &scene->meshes);
-
-    // mesh->first_triangle = scene->triangle_count;
-    // mesh->triangle_count = 0;
-
-    // mesh->first_vertex_pos = scene->vertex_pos_count;
-    // mesh->vertex_pos_count = 0;
-
-    // mesh->first_vertex_normal = scene->vertex_normal_count;
-    // mesh->vertex_normal_count = 0;
-
-    // mesh->first_vertex_texcoord = scene->vertex_texcoord_count;
-    // mesh->vertex_texcoord_count = 0;
-
-    // AABB aabb = (AABB) {
-    //     .min = {FLT_MAX, FLT_MAX, FLT_MAX}, 
-    //     .max = {-FLT_MAX, -FLT_MAX, -FLT_MAX}
-    // };
-
-    // char line[512], mtl_name[128];
-
-    // while (fgets(line, 512, f)) {
-    //     double x, y, z;
-    //     if (sscanf(line, "v %lf %lf %lf", &x, &y, &z) == 3) {
-    //         add_vertex_pos(x, -z, y, scene);
-    //         mesh->vertex_pos_count++;
-    //     } else if (sscanf(line, "vn %lf %lf %lf", &x, &y, &z) == 3) {
-    //         add_vertex_normal(x, -z, y, scene);
-    //         mesh->vertex_normal_count++;
-    //     } else if (sscanf(line, "vt %lf %lf", &x, &y) == 2) {
-    //         add_vertex_texcoord(x, y, scene);
-    //         mesh->vertex_texcoord_count++;
-    //     } else if (strncmp(line, "mtllib ", 7) == 0) {
-    //         int cc1 = 0;
-    //         int cc2 = 7;
-
-    //         char mtl_name[128], mtl_path[128];
-
-    //         while((mtl_name[cc1++] = line[cc2++]) && mtl_name[cc1 - 1] != '\n');
-    //         if (mtl_name[cc1 - 1] == '\n') mtl_name[cc1 - 1] = '\0';
-
-    //         create_path(mtl_path, file_name, mtl_name);
-    //         FILE *m = fopen(mtl_path, "r");
-    //         if (!m) continue;
-
-    //         printf("Loading material file: %s\n", mtl_path);
-
-    //         int illium;
-
-    //         //must handle material change
-
-    //         // while (fgets(line, 512, m)) {
-    //         //     if (sscanf(line, "newmtl %s", mtl_name) == 1) {
-    //         //         active_material = get_element(add_material(mtl_name, &m_idx, scene), &scene->materials);
-    //         //         active_material->reflectivity = 0.0;
-    //         //         active_material->diffuse_map = (size_t)-1;
-    //         //         active_material->splecular_map = (size_t)-1;
-    //         //         active_material->normal_map = (size_t)-1;
-    //         //     } else if (sscanf(line, "Kd %lf %lf %lf", &x, &y, &z) == 3) {
-    //         //         active_material->diffuse = vec(x, y, z);
-    //         //     } else if (sscanf(line, "Ks %lf %lf %lf", &x, &y, &z) == 3) {
-    //         //         active_material->specular = vec(x, y, z);
-    //         //     } else if (sscanf(line, "Ns %lf", &x) == 1) {
-    //         //         active_material->shininess = x;
-    //         //     } else if (sscanf(line, "illum %d", &illium) == 1) {
-    //         //         switch (illium) {
-    //         //         case 0:
-    //         //             active_material->diffuse = vec(0.0, 0.0, 0.0);
-    //         //             active_material->specular = vec(0.0, 0.0, 0.0);
-    //         //             break;
-    //         //         case 1:
-    //         //             active_material->specular = vec(0.0, 0.0, 0.0);
-    //         //         default:
-    //         //             break;
-    //         //         }
-
-    //         //     } else if (strncmp(line, "map_Kd ", 7) == 0) {
-    //         //         active_material->diffuse_map = import_texture(line + 7, mtl_path, scene);
-    //         //     }
-    //         // }
-
-    //         fclose(m);
-    //     } else if (sscanf(line, "usemtl %s", mtl_name) == 1) {
-    //         active_material_id = get_material_id(mtl_name, &m_idx);
-    //     } else if (line[0] == 'f' && line[1] == ' ') {
-    //         char *p = line + 2;
-    //         uint32_t count = 0;
-    //         Face idx[64];
-
-    //         while(*p) {
-    //             while (isspace((unsigned char)*p)) p++;
-    //             if (!*p) break;
-
-    //             long long v, vt, vn;
-
-    //             v = strtoll(p, &p, 10);
-    //             v = v < 0 ? (uint32_t)(mesh->vertex_pos_count + v) : (uint32_t)(v - 1);
-    //             if (*p == '/') {
-    //                 p++;
-
-    //                 if (*p != '/') {
-    //                     vt = strtoll(p, &p, 10);
-    //                     vt = vt < 0 ? (uint32_t)(mesh->vertex_texcoord_count + vt) : (uint32_t)(vt - 1);
-    //                 } else {
-    //                     vt = (uint32_t)-1;
-    //                 }
-                    
-    //                 if (*p == '/') {
-    //                     p++;
-    //                     vn = strtoll(p, &p, 10);
-    //                     vn = vn < 0 ? (uint32_t)(mesh->vertex_normal_count + vn) : (uint32_t)(vn - 1);
-    //                 } else {
-    //                     vn = (uint32_t)-1;
-    //                 }
-    //             } else {
-    //                 vt = (uint32_t)-1;
-    //                 vn = (uint32_t)-1;
-    //             }
-
-    //             idx[count++] = (Face){.v = v, .vt = vt, .vn = vn};
-
-    //             while(*p && !isspace((unsigned char)*p)) p++;
-                
-    //             if (count >= 64) break;
-    //         }
-
-    //         for (int i = 1; i < count - 1; i++) {
-    //             add_triangle_from_indices(
-    //                 mesh->first_vertex_pos + idx[0].v,
-    //                 mesh->first_vertex_pos + idx[i].v,
-    //                 mesh->first_vertex_pos + idx[i + 1].v,
-
-    //                 idx[0].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[0].vn,
-    //                 idx[i].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[i].vn,
-    //                 idx[i + 1].vn == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_normal + idx[i + 1].vn,
-
-    //                 idx[0].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[0].vt,
-    //                 idx[i].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i].vt,
-    //                 idx[i + 1].vt == (uint32_t)-1 ? (uint32_t)-1 : mesh->first_vertex_texcoord + idx[i + 1].vt,
-
-    //                 active_material_id,
-    //                 scene
-    //             );
-
-    //             aabb = aabb_merge(aabb, scene->triangles.aabb[scene->triangle_count - 1]);
-    //             mesh->triangle_count++;
-    //         }
-    //     }
-    // }
-
-    // mesh->position = vec(aabb.min[0], aabb.min[1], aabb.min[2]);
-    // mesh->rotation = vec(0.0, 0.0, 0.0);
-    // mesh->size = vec(aabb.max[0] - aabb.min[0], aabb.max[1] - aabb.min[1], aabb.max[2] - aabb.min[2]);
-    // mesh->aabb = aabb;
-
-    // return out;
-}
-
 typedef struct {
     unsigned char *data;
 
@@ -428,11 +262,11 @@ uint32_t import_glTF(Scene *scene, char *file_name) {
                 float _min[3];
                 float _max[3];
 
-                vecf_min3(_a, _b, _tmp);
-                vecf_min3(_c, _tmp, _min);
+                vecf_min(_a, _b, _tmp);
+                vecf_min(_c, _tmp, _min);
 
-                vecf_max3(_a, _b, _tmp);
-                vecf_max3(_c, _tmp, _max);
+                vecf_max(_a, _b, _tmp);
+                vecf_max(_c, _tmp, _max);
 
                 AABB aabb = {
                     .min = {_min[0], _min[1], _min[2]},
@@ -673,10 +507,10 @@ void scale_mesh(Scene *scene, Mesh *mesh, Vec scaling) {
         float v_b[3] = {scene->vertex_data[0][3 * scene->triangles.bi[i] + 0], scene->vertex_data[0][3 * scene->triangles.bi[i] + 1], scene->vertex_data[0][3 * scene->triangles.bi[i] + 2]};
         float v_c[3] = {scene->vertex_data[0][3 * scene->triangles.ci[i] + 0], scene->vertex_data[0][3 * scene->triangles.ci[i] + 1], scene->vertex_data[0][3 * scene->triangles.ci[i] + 2]};
         float min[3], max[3];
-        vecf_min3(v_a, v_b, min);
-        vecf_min3(min, v_c, min);
-        vecf_max3(v_a, v_b, max);
-        vecf_max3(max, v_c, max);
+        vecf_min(v_a, v_b, min);
+        vecf_min(min, v_c, min);
+        vecf_max(v_a, v_b, max);
+        vecf_max(max, v_c, max);
 
         scene->triangles.aabb[i] = (AABB) {
             .min = {min[0], min[1], min[2]},
@@ -727,10 +561,10 @@ void rotate_mesh(Scene *scene, Mesh *mesh, Vec rotation) {
         float v_b[3] = {scene->vertex_data[0][3 * scene->triangles.bi[i] + 0], scene->vertex_data[0][3 * scene->triangles.bi[i] + 1], scene->vertex_data[0][3 * scene->triangles.bi[i] + 2]};
         float v_c[3] = {scene->vertex_data[0][3 * scene->triangles.ci[i] + 0], scene->vertex_data[0][3 * scene->triangles.ci[i] + 1], scene->vertex_data[0][3 * scene->triangles.ci[i] + 2]};
         float min[3], max[3];
-        vecf_min3(v_a, v_b, min);
-        vecf_min3(min, v_c, min);
-        vecf_max3(v_a, v_b, max);
-        vecf_max3(max, v_c, max);
+        vecf_min(v_a, v_b, min);
+        vecf_min(min, v_c, min);
+        vecf_max(v_a, v_b, max);
+        vecf_max(max, v_c, max);
 
         scene->triangles.aabb[i] = (AABB) {
             .min = {min[0], min[1], min[2]},
@@ -766,8 +600,8 @@ void apply_mesh_transform(Mesh *mesh) {
     float min[3] = {mesh->aabb.min[0], mesh->aabb.min[1], mesh->aabb.min[2]};
     float max[3] = {mesh->aabb.max[0], mesh->aabb.max[1], mesh->aabb.max[2]};
 
-    vecf_min3(min, max, mesh->aabb.min);
-    vecf_max3(min, max, mesh->aabb.max);
+    vecf_min(min, max, mesh->aabb.min);
+    vecf_max(min, max, mesh->aabb.max);
     
     mesh->position = vec(mesh->aabb.min[0], mesh->aabb.min[1], mesh->aabb.min[2]);
     mesh->size = v_sub(vec(mesh->aabb.max[0], mesh->aabb.max[1], mesh->aabb.max[2]), mesh->position);

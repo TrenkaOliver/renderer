@@ -2,112 +2,79 @@
 #include <stdio.h>
 #include <immintrin.h>
 
-#include "geometry/object.h"
+#include "geometry/triangle.h"
 
 #define EPSILON 1e-4
 
-__m256 packed_triangle_ray_intersection(uint32_t idx, PackedRay *ray, RuntimeTriangle *array, PackedInfo *info) {
-    ps_Vec a = (ps_Vec){
+__m256 packed_triangle_ray_intersection(const uint32_t idx, const PackedRay * restrict ray, const RuntimeTriangle * restrict array, PackedInfo * restrict info) {
+    const ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 2 + idx)
     };
-    
-    ps_Vec ab = (ps_Vec){
+
+    const ps_Vec ab = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + array->offset * 3 + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset * 4 + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 5 + idx)
     };
-    
-    ps_Vec ac = (ps_Vec){
+
+    const ps_Vec ac = (ps_Vec){
         .x = _mm256_loadu_ps(array->arr + array->offset * 6 + idx),
         .y = _mm256_loadu_ps(array->arr + array->offset * 7 + idx),
         .z = _mm256_loadu_ps(array->arr + array->offset * 8 + idx)
     };
-    
-    ps_Vec ao = ps_v_sub(ray->o, a);
-    
-    ps_Vec cross_ao_ab = ps_cross(ao, ab);
-    ps_Vec cross_ray_v_ac = ps_cross(ray->v, ac);
-    
-    __m256 zero = _mm256_setzero_ps();
-    __m256 one = _mm256_set1_ps(1.0f);
 
-    __m256 denom = ps_dot(ab, cross_ray_v_ac);
-    __m256 inv_denom = _mm256_rcp_ps(denom);
-    
-    __m256 _eps = _mm256_set1_ps(EPSILON);
-    __m256 _negzero = _mm256_set1_ps(-0.0f);
+    const ps_Vec ao = ps_v_sub(ray->o, a);
 
-    __m256 valid = _mm256_cmp_ps(_mm256_andnot_ps(_negzero, denom), _eps, _CMP_GE_OQ);
-    
-    __m256 u = _mm256_mul_ps(ps_dot(ao, cross_ray_v_ac), inv_denom);
-    valid = _mm256_and_ps(valid, _mm256_cmp_ps(u, zero, _CMP_GE_OQ));
+    const ps_Vec cross_ray_v_ac = ps_cross(ray->v, ac);
+    const ps_Vec cross_ao_ab = ps_cross(ao, ab);
 
-    __m256 v = _mm256_mul_ps(ps_dot(ray->v, cross_ao_ab), inv_denom);
-    valid = _mm256_and_ps(valid, _mm256_cmp_ps(v, zero, _CMP_GE_OQ));
+    const __m256 denom = ps_dot(ab, cross_ray_v_ac);
+    const __m256 inv_denom = _mm256_rcp_ps(denom);
 
-    valid = _mm256_and_ps(valid, _mm256_cmp_ps(_mm256_add_ps(u, v), one, _CMP_LE_OQ));
+    const __m256 zero = _mm256_setzero_ps();
 
-    __m256 t = _mm256_mul_ps(ps_dot(ac, cross_ao_ab), inv_denom);
+    __m256 valid = _mm256_cmp_ps(
+        denom,
+        zero,
+        _CMP_NEQ_OQ
+    );
 
+    const __m256 u_num = ps_dot(ao, cross_ray_v_ac);
+    const __m256 v_num = ps_dot(ray->v, cross_ao_ab);
+    const __m256 t_num = ps_dot(ac, cross_ao_ab);
+
+    const __m256 u = _mm256_mul_ps(u_num, inv_denom);
     info->u = u;
+
+
+    valid = _mm256_and_ps(
+        valid,
+        _mm256_cmp_ps(u, zero, _CMP_GE_OQ)
+    );
+
+    const __m256 v = _mm256_mul_ps(v_num, inv_denom);
     info->v = v;
+
+    valid = _mm256_and_ps(
+        valid,
+        _mm256_cmp_ps(v, zero, _CMP_GE_OQ)
+    );
+
+    const __m256 one = _mm256_set1_ps(1.0f);
+
+    valid = _mm256_and_ps(
+        valid,
+        _mm256_cmp_ps(_mm256_add_ps(u, v), one, _CMP_LE_OQ)
+    );
+
+    const __m256 t = _mm256_mul_ps(t_num, inv_denom);
 
     return _mm256_blendv_ps(_mm256_set1_ps(-1.0f), t, valid);
 }
 
-double triangle_ray_intersection(Object *object, Ray *ray, Info *info) {
-    Vec ab, ac, ao;
-    double denom, u, v, t;
-
-    ab = v_sub(object->type.triangle.b, object->type.triangle.a);
-    ac = v_sub(object->type.triangle.c, object->type.triangle.a);
-    ao = v_sub(ray->o, object->type.triangle.a);
-
-    denom = dot(ab, cross(ray->v, ac));
-    if (fabs(denom) < EPSILON) return -1.0;
-
-    u = dot(ao, cross(ray->v, ac)) / denom;
-    if (u < 0.0) return -1.0;
-
-    v = dot(ray->v, cross(ao, ab)) / denom;
-    if (v < 0.0) return -1.0;
-
-    if (u + v > 1.0) return -1.0;
-
-    t = dot(ac, cross(ao, ab)) / denom;
-    info->u = u;
-    info->v = v;
-    info->w = 1 - u - v;
-    
-    return t;
-}
-
-
-
-HitResult get_triangle_result(Ray *ray, Object *object, Info *info, double t) {
-    // Vec p, ns;
-    // double d_u, d_v;
-
-    // p = v_add(ray->o, scale(ray->v, t));
-    
-    // ns = object->type.triangle.const_normal
-    // ? object->type.triangle.ng 
-    // : normalize(v_add(v_add(scale(object->type.triangle.na, info->w), scale(object->type.triangle.nb, info->u)), scale(object->type.triangle.nc, info->v)));
-
-    // if (object->material->diffuse_map != (size_t)-1) {
-    //     d_u = object->type.triangle.ta.x * info->w + object->type.triangle.tb.x * info->u + object->type.triangle.tc.x * info->v;
-    //     d_v = object->type.triangle.ta.y * info->w + object->type.triangle.tb.y * info->u + object->type.triangle.tc.y * info->v;
-    // } else {
-    //     d_u = NAN;
-    //     d_v = NAN;
-    // }
-    
-    // return (HitResult){.point = p, .ng = object->type.triangle.ng, .ns = ns, .t = t, .material = object->material, .d_u = d_u, .d_v = d_v};
-}
-
-PackedMaterial create_packed_material(Material *materials[8], DynArray *textures) {
+static inline PackedMaterial create_packed_material(Material * restrict materials[8], const DynArray * restrict textures) {
     float bcfx[8], bcfy[8], bcfz[8];
     float metallic[8], roughness[8];
     float efx[8], efy[8], efz[8];
@@ -231,9 +198,12 @@ PackedMaterial create_packed_material(Material *materials[8], DynArray *textures
     };
 }
 
-PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint32_t building_indices[8], PackedRay ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, float **vertex_data, DynArray *materials, DynArray *textures) {
-    __m256 t = _mm256_loadu_ps(t_arr);
-    ps_Vec p = ps_v_add(ray.o, ps_scale_ps(ray.v, t));
+PackedHitResult packed_triangle_result(
+const float t_arr[8], const __m256 u, const __m256 v, const uint32_t building_indices[8], const PackedRay ray, const RuntimeTriangle * restrict runtime_triangles,
+const OriginalTriangle * restrict building_triangles, float **vertex_data, const DynArray * restrict materials, const DynArray * restrict textures
+) {
+    const __m256 t = _mm256_loadu_ps(t_arr);
+    const ps_Vec p = ps_v_add(ray.o, ps_scale_ps(ray.v, t));
 
     uint32_t indices[8];
 
@@ -270,7 +240,7 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
     float cy[8];
     float cz[8];
 
-    __m256 w = _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_add_ps(u, v));
+    const __m256 w = _mm256_sub_ps(_mm256_set1_ps(1.0f), _mm256_add_ps(u, v));
 
     for (int i = 0; i < 8; i++) {
         if (t_arr[i] != -1.0f) {
@@ -346,52 +316,52 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
         }
     }
 
-    ps_Vec ng = (ps_Vec){
+    const ps_Vec ng = (ps_Vec){
         .x = _mm256_loadu_ps(ngx),
         .y = _mm256_loadu_ps(ngy),
         .z = _mm256_loadu_ps(ngz)
     };
 
-    ps_Vec na = (ps_Vec){
+    const ps_Vec na = (ps_Vec){
         .x = _mm256_loadu_ps(nax),
         .y = _mm256_loadu_ps(nay),
         .z = _mm256_loadu_ps(naz)
     };
 
-    ps_Vec nb = (ps_Vec){
+    const ps_Vec nb = (ps_Vec){
         .x = _mm256_loadu_ps(nbx),
         .y = _mm256_loadu_ps(nby),
         .z = _mm256_loadu_ps(nbz)
     };
 
-    ps_Vec nc = (ps_Vec){
+    const ps_Vec nc = (ps_Vec){
         .x = _mm256_loadu_ps(ncx),
         .y = _mm256_loadu_ps(ncy),
         .z = _mm256_loadu_ps(ncz)
     };
 
-    ps_Vec ns = ps_normalize(ps_v_add(ps_v_add(ps_scale_ps(na, w), ps_scale_ps(nb, u)), ps_scale_ps(nc, v)));
+    const ps_Vec ns = ps_normalize(ps_v_add(ps_v_add(ps_scale_ps(na, w), ps_scale_ps(nb, u)), ps_scale_ps(nc, v)));
 
-    ps_Vec a = (ps_Vec){
+    const ps_Vec a = (ps_Vec){
         .x = _mm256_loadu_ps(ax),
         .y = _mm256_loadu_ps(ay),
         .z = _mm256_loadu_ps(az)
     };
 
-    ps_Vec b = (ps_Vec){
+    const ps_Vec b = (ps_Vec){
         .x = _mm256_loadu_ps(bx),
         .y = _mm256_loadu_ps(by),
         .z = _mm256_loadu_ps(bz)
     };
 
-    ps_Vec c = (ps_Vec){
+    const ps_Vec c = (ps_Vec){
         .x = _mm256_loadu_ps(cx),
         .y = _mm256_loadu_ps(cy),
         .z = _mm256_loadu_ps(cz)
     };
 
-    ps_Vec ab = ps_v_sub(b, a);
-    ps_Vec ac = ps_v_sub(c, a);
+    const ps_Vec ab = ps_v_sub(b, a);
+    const ps_Vec ac = ps_v_sub(c, a);
 
     float uv_ab_u[8], uv_ab_v[8];
     float uv_ac_u[8], uv_ac_v[8];
@@ -405,7 +375,7 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
         uv_ac_v[i] = vertex_data[2][2 * building_triangles->ci[indices[i]] + 1] - vertex_data[2][2 * building_triangles->ai[indices[i]] + 1];
     }
 
-    __m256 uv_ab[2] = {
+    const __m256 uv_ab[2] = {
         _mm256_loadu_ps(uv_ab_u),
         _mm256_loadu_ps(uv_ab_v)
     };
@@ -415,32 +385,28 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
         _mm256_loadu_ps(uv_ac_v)
     };
 
-    __m256 D = _mm256_sub_ps(_mm256_mul_ps(uv_ab[0], uv_ac[1]), _mm256_mul_ps(uv_ab[1], uv_ac[0]));
-    __m256 rcp_D = _mm256_rcp_ps(D);
+    const __m256 D = _mm256_sub_ps(_mm256_mul_ps(uv_ab[0], uv_ac[1]), _mm256_mul_ps(uv_ab[1], uv_ac[0]));
+    const __m256 rcp_D = _mm256_rcp_ps(D);
 
-    __m256 valid_tangent = _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.0f), D), _mm256_set1_ps(EPSILON), _CMP_GT_OQ);
+    const __m256 valid_tangent = _mm256_cmp_ps(_mm256_andnot_ps(_mm256_set1_ps(-0.0f), D), _mm256_set1_ps(EPSILON), _CMP_GT_OQ);
 
-    __m256 valid_hit = _mm256_cmp_ps(t, _mm256_set1_ps(-1.0f), _CMP_NEQ_OQ);
+    const __m256 valid_hit = _mm256_cmp_ps(t, _mm256_set1_ps(-1.0f), _CMP_NEQ_OQ);
 
-    ps_Vec tangent = ps_scale_ps(
+    const ps_Vec tangent = ps_scale_ps(
         ps_v_sub(
             ps_scale_ps(ab, uv_ac[1]),
             ps_scale_ps(ac, uv_ab[1])
         ),
-        // _mm256_div_ps(_mm256_set1_ps(1.0f), D)
         rcp_D
     );
 
-    ps_Vec bitangent = ps_scale_ps(
+    const ps_Vec bitangent = ps_scale_ps(
         ps_v_sub(
             ps_scale_ps(ac, uv_ab[0]),
             ps_scale_ps(ab, uv_ac[0])
         ),
-        // _mm256_div_ps(_mm256_set1_ps(1.0f), D)
         rcp_D
     );
-
-    //maybe zero out tangent and bitangent if valid_tangent is false
 
     return (PackedHitResult){
         .ray = ray,
@@ -456,105 +422,4 @@ PackedHitResult packed_triangle_result(float t_arr[8], __m256 u, __m256 v, uint3
         .d_u = _mm256_loadu_ps(d_u), 
         .d_v = _mm256_loadu_ps(d_v)
     };
-}
-
-HitResult triangle_result(float t, float u, float v, uint32_t idx, Ray *ray, RuntimeTriangle *runtime_triangles, BuildingTriangle *building_triangles, float **vertex_data, DynArray *materials) {
-    Vec p = v_add(ray->o, scale(ray->v, t));
-
-    uint32_t i = runtime_triangles->building_idx[idx];
-    Vec ng = {
-        .x = building_triangles->nx[i],
-        .y = building_triangles->ny[i],
-        .z = building_triangles->nz[i]
-    };
-
-    Material *m = ((Material *)materials->ptr) + building_triangles->material[i];
-
-    float w = 1 - u - v;
-
-    Vec ns;
-
-    Vec na = vec(
-        vertex_data[1][3 * building_triangles->ai[i] + 0],
-        vertex_data[1][3 * building_triangles->ai[i] + 1],
-        vertex_data[1][3 * building_triangles->ai[i] + 2]
-    );
-
-    Vec nb = vec(
-        vertex_data[1][3 * building_triangles->bi[i] + 0],
-        vertex_data[1][3 * building_triangles->bi[i] + 1],
-        vertex_data[1][3 * building_triangles->bi[i] + 2]
-    );
-
-    Vec nc = vec(
-        vertex_data[1][3 * building_triangles->ci[i] + 0],
-        vertex_data[1][3 * building_triangles->ci[i] + 1],
-        vertex_data[1][3 * building_triangles->ci[i] + 2]
-    );
-
-    ns = ns = normalize(v_add(v_add(scale(na, w), scale(nb, u)), scale(nc, v)));
-    double d_u, d_v;
-
-    d_u = vertex_data[2][2 * building_triangles->ai[i] + 0] * w + vertex_data[2][2 * building_triangles->bi[i] + 0] * u + vertex_data[2][2 * building_triangles->ci[i] + 0] * v;
-    d_v = vertex_data[2][2 * building_triangles->ai[i] + 1] * w + vertex_data[2][2 * building_triangles->bi[i] + 1] * u + vertex_data[2][2 * building_triangles->ci[i] + 1] * v;
-
-    Vec a = vec(
-        vertex_data[0][3 * building_triangles->ai[i] + 0],
-        vertex_data[0][3 * building_triangles->ai[i] + 1],
-        vertex_data[0][3 * building_triangles->ai[i] + 2]
-    );
-
-    Vec b = vec(
-        vertex_data[0][3 * building_triangles->bi[i] + 0],
-        vertex_data[0][3 * building_triangles->bi[i] + 1],
-        vertex_data[0][3 * building_triangles->bi[i] + 2]
-    );
-
-    Vec c = vec(
-        vertex_data[0][3 * building_triangles->ci[i] + 0],
-        vertex_data[0][3 * building_triangles->ci[i] + 1],
-        vertex_data[0][3 * building_triangles->ci[i] + 2]
-    );
-
-    Vec ab = v_sub(b, a);
-    Vec ac = v_sub(c, a);
-    
-    float uv_ab[2] = {
-        vertex_data[2][2 * building_triangles->bi[i] + 0] - vertex_data[2][2 * building_triangles->ai[i] + 0],
-        vertex_data[2][2 * building_triangles->bi[i] + 1] - vertex_data[2][2 * building_triangles->ai[i] + 1],
-    };
-
-    float uv_ac[2] = {
-        vertex_data[2][2 * building_triangles->ci[i] + 0] - vertex_data[2][2 * building_triangles->ai[i] + 0],
-        vertex_data[2][2 * building_triangles->ci[i] + 1] - vertex_data[2][2 * building_triangles->ai[i] + 1],
-    };
-
-    float D = uv_ab[0] * uv_ac[1] - uv_ab[1] * uv_ac[0];
-
-    Vec tangent, bitangent;
-
-    int valid_tangent = fabsf(D) > EPSILON;
-
-    if (valid_tangent) {
-        tangent = scale(
-            v_sub(
-                scale(ab, uv_ac[1]),
-                scale(ac, uv_ab[1])
-            ),
-            1.0f / D
-        );
-
-        bitangent = scale(
-            v_sub(
-                scale(ac, uv_ab[0]),
-                scale(ab, uv_ac[0])
-            ),
-            1.0f / D
-        );
-    } else {
-        tangent = vec(0.0, 0.0, 0.0);
-        bitangent = vec(0.0, 0.0, 0.0);
-    }
-
-    return (HitResult){.point = p, .ng = ng, .ns = ns, .tangent = tangent, .bitangent = bitangent, .valid_tangent = valid_tangent, .t = t, .material = m, .d_u = d_u, .d_v = d_v};
 }

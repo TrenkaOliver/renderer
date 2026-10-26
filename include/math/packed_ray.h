@@ -9,6 +9,14 @@ typedef struct PackedRay {
     ps_Vec inv_v;
 } PackedRay;
 
-PackedRay packed_create_ray(ps_Vec o, ps_Vec v);
+static inline PackedRay packed_create_ray(const ps_Vec o, const ps_Vec v) {
+    const ps_Vec inv_v = ps_reciprocal(v);
+    
+    return (PackedRay) {
+        .o = o,
+        .v = v,
+        .inv_v = inv_v,
+    };
+}
 
 #endif

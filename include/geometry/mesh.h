@@ -1,7 +1,7 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "geometry/object.h"
+#include "geometry/aabb.h"
 #include "light/material.h"
 
 typedef struct Face {

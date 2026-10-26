@@ -10,24 +10,16 @@ OUT = app
 SRC = \
 	main.c \
 	src/accel/bvh.c \
-	src/accel/cmp.c \
-	src/array/array.c \
 	src/camera/camera.c \
-	src/geometry/aabb.c \
-	src/geometry/box.c \
 	src/geometry/mesh.c \
-	src/geometry/object.c \
-	src/geometry/plane.c \
-	src/geometry/sphere.c \
 	src/geometry/triangle.c \
-	src/light/material.c \
 	src/math/vec.c \
 	src/math/ray.c \
-	src/math/packed_ray.c \
-	src/render/pixel.c \
 	src/render/render.c \
 	src/render/trace.c \
+	src/render/traversal.c \
 	src/scene/scene.c \
+	src/scene/sample.c \
 	third_party/image/stb_image.c \
 	third_party/json/yyjson.c
 

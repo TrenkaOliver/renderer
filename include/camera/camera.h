@@ -11,8 +11,8 @@ typedef struct Camera {
     double fov;
 } Camera;
 
-Camera create_camera(Vec position, Vec rotation, double fov);
+Camera create_camera(const Vec position, const Vec rotation, const double fov);
 
-Camera create_look_at_camera(Vec position, Vec look_at, double fov);
+Camera create_look_at_camera(const Vec position, const Vec look_at, const double fov);
 
 #endif

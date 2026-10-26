@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "accel/bvh.h"
-#include "accel/cmp.h"
 #include "geometry/triangle.h"
 
 #define C_TRAVERSAL 1.0f
@@ -18,7 +17,7 @@ typedef struct Bin {
     uint32_t count;
 } Bin;
 
-static BuildingTriangle building_triangles;
+static OriginalTriangle building_triangles;
 static BVHNode *nodes;
 static float *sah_cost;
 uint32_t node_count;
@@ -32,13 +31,12 @@ uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx);
 uint32_t build_tree(uint32_t start, uint32_t end, uint32_t idx);
 uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx);
 
-BVH create_bvh(BuildingTriangle *first, size_t count) {
+BVH create_bvh(OriginalTriangle *first, size_t count) {
     size_t i;
     BVH bvh;
 
     bvh.nodes = nodes = calloc(count * 2 - 1, sizeof(BVHNode));
-    //bvh.triangles = ptr_array = calloc(count, sizeof(BuildingTriangle *));
-    building_triangles = (BuildingTriangle) {
+    building_triangles = (OriginalTriangle) {
         .ai = malloc(count * sizeof(uint32_t)),
         .bi = malloc(count * sizeof(uint32_t)),
         .ci = malloc(count * sizeof(uint32_t)),
@@ -50,7 +48,7 @@ BVH create_bvh(BuildingTriangle *first, size_t count) {
         .material = malloc(count * sizeof(void *))
     };
 
-    bvh.triangles = (BuildingTriangle) {
+    bvh.triangles = (OriginalTriangle) {
         .ai = building_triangles.ai,
         .bi = building_triangles.bi,
         .ci = building_triangles.ci,
@@ -113,7 +111,6 @@ float SA(AABB aabb) {
 uint32_t create_node(uint32_t first_or_right, uint32_t count, uint32_t idx) {
     uint32_t i;
     AABB aabb;
-    BVHNode *node;
 
     aabb = (AABB){
         .min = {FLT_MAX, FLT_MAX, FLT_MAX},
@@ -518,7 +515,7 @@ uint32_t next = 0;
 
 uint32_t created_nodes = 0;
 
-BVH8Tree create_bvh8_tree(BuildingTriangle *first, float **vertex_data, size_t count) {
+BVH8Tree create_bvh8_tree(OriginalTriangle *first, float **vertex_data, size_t count) {
     BVH bvh = create_bvh(first, count);
 
     bvh8nodes = malloc(bvh8node_capacity * sizeof(BVH8Node) + 32);
@@ -597,7 +594,7 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, float **vertex_data, size_t c
     BVH8Tree bvh8tree = {
         .nodes = bvh8nodes,
         .vertex_data = vertex_data,
-        .building_triangles = (BuildingTriangle) {
+        .building_triangles = (OriginalTriangle) {
             .ai = bvh.triangles.ai,
             .bi = bvh.triangles.bi,
             .ci = bvh.triangles.ci,
@@ -615,9 +612,8 @@ BVH8Tree create_bvh8_tree(BuildingTriangle *first, float **vertex_data, size_t c
 
     return bvh8tree;
 }
-void setup_leaf(BVH *bvh, float **vertex_data, uint32_t first_triangle, uint32_t count, int src) {
-    int i;
-    for (i = 0; i < count; i++) {
+void setup_leaf(float **vertex_data, uint32_t first_triangle, uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) {
         float ax = triangles_ptr->arr[next + triangles_offset * 0 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 0];
         float ay = triangles_ptr->arr[next + triangles_offset * 1 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 1];
         float az =triangles_ptr->arr[next + triangles_offset * 2 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 2];
@@ -649,7 +645,7 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
     primitive_count[0] = bvh->nodes[indices[0]].primitive_count;
 
     if (primitive_count[0]) {
-        setup_leaf(bvh, vertex_data, bvh->nodes[indices[0]].first_primitive_or_right_child, primitive_count[0], 0);
+        setup_leaf(vertex_data, bvh->nodes[indices[0]].first_primitive_or_right_child, primitive_count[0]);
         indices[0] = next;
         next += primitive_count[0];
     }
@@ -659,7 +655,7 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
     primitive_count[1] = bvh->nodes[indices[1]].primitive_count;
 
     if (primitive_count[1]) {
-        setup_leaf(bvh, vertex_data, bvh->nodes[indices[1]].first_primitive_or_right_child, primitive_count[1], 1);
+        setup_leaf(vertex_data, bvh->nodes[indices[1]].first_primitive_or_right_child, primitive_count[1]);
         indices[1] = next;
         next += primitive_count[1];
     }
@@ -699,7 +695,7 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
         primitive_count[count] = bvh->nodes[right].primitive_count;
 
         if (primitive_count[count]) {
-            setup_leaf(bvh, vertex_data, bvh->nodes[right].first_primitive_or_right_child, primitive_count[count], 2);
+            setup_leaf(vertex_data, bvh->nodes[right].first_primitive_or_right_child, primitive_count[count]);
             indices[count] = next;
             next += primitive_count[count];
         }
@@ -710,7 +706,7 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
         //if (primitive_count[best_split]) indices[best_split] = bvh->nodes[indices[best_split]].first_primitive_or_right_child;
 
         if (primitive_count[best_split]) {
-            setup_leaf(bvh, vertex_data, bvh->nodes[indices[best_split]].first_primitive_or_right_child, primitive_count[best_split], 3);
+            setup_leaf(vertex_data, bvh->nodes[indices[best_split]].first_primitive_or_right_child, primitive_count[best_split]);
             indices[best_split] = next;
             next += primitive_count[best_split];
         }

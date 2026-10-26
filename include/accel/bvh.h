@@ -4,8 +4,12 @@
 #include <stdint.h>
 
 #include "geometry/aabb.h"
-//#include "geometry/object.h"
 #include "geometry/triangle.h"
+
+#define C_TRAVERSAL 1.0f
+#define C_INTERSECT 1.0f
+#define BIN_COUNT 32
+#define LEAF_SIZE 8
 
 extern uint32_t next;
 
@@ -17,7 +21,7 @@ typedef struct BVHNode {
 
 typedef struct BVH {
     BVHNode *nodes;
-    BuildingTriangle triangles;
+    OriginalTriangle triangles;
 } BVH;
 
 typedef struct BVH8Node {
@@ -31,11 +35,11 @@ typedef struct BVH8Node {
 typedef struct BVH8Tree {
     BVH8Node *nodes;
     float **vertex_data;
-    BuildingTriangle building_triangles;
+    OriginalTriangle building_triangles;
     RuntimeTriangle runtime_triangles;
 } BVH8Tree;
 
-BVH create_bvh(BuildingTriangle *triangles, size_t count);
-BVH8Tree create_bvh8_tree(BuildingTriangle *triangles, float **vertex_data, size_t count);
+BVH create_bvh(OriginalTriangle *triangles, size_t count);
+BVH8Tree create_bvh8_tree(OriginalTriangle *triangles, float **vertex_data, size_t count);
 
 #endif

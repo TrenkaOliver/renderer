@@ -3,7 +3,6 @@
 
 #define EPSILON 1e-3
 
-#include "geometry/object.h"
 #include "geometry/hit.h"
 #include "scene/scene.h"
 #include "camera/camera.h"
@@ -15,17 +14,9 @@ typedef struct TraceResult {
     __m256 valid_ref;
 } TraceResult;
 
-HitResult get_first_plane(Ray *ray, DynArray *planes);
-int is_shaded_by_plane(Ray *ray, DynArray *planes);
+PackedHitResult packed_get_first_object(const Ray * restrict ray, const BVH8Tree * restrict bvh, const DynArray * restrict materials, const DynArray *restrict textures);
+//int is_shaded_by_object(Ray * restrict ray, BVH8Tree * restrict bvh);
 
-HitResult get_first_object(Ray *ray, BVH8Tree *bvh, DynArray *materials);
-PackedHitResult packed_get_first_object(Ray ray[8], BVH8Tree *bvh, DynArray *materials, DynArray *textures);
-int is_shaded_by_object(Ray *ray, BVH8Tree *bvh);
-
-HitResult get_first_hit(Ray *ray, Scene *scene, BVH8Tree *bvh);
-int is_shaded(Ray *ray, Scene *scene, BVH8Tree *bvh);
-
-Vec trace_ray(Ray *ray, Scene *scene, Camera *cam, BVH8Tree *bvh, int depth);
-TraceResult packed_trace_ray(Ray ray[8], Scene *scene, Camera *cam, BVH8Tree *bvh, __m256i depth);
+TraceResult packed_trace_ray(Ray * restrict ray, const Scene * restrict scene, const Camera * restrict cam, const BVH8Tree * restrict bvh, const __m256i depth);
 
 #endif
