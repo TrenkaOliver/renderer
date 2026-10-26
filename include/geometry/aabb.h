@@ -41,21 +41,21 @@ static inline AABB aabb_merge(const AABB a, const AABB b) {
     };
 }
 
-static inline __m256 packed_aabb_ray_intersection(const PackedAABB *aabb, const PackedRay *ray) {
-    const __m256 tx0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.x, ray->o.x), ray->inv_v.x);
-    const __m256 tx1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.x, ray->o.x), ray->inv_v.x);
+static inline __m256 packed_aabb_ray_intersection(const PackedAABB *aabb, const ps_Vec ray_o, const ps_Vec ray_inv_v) {
+    const __m256 tx0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.x, ray_o.x), ray_inv_v.x);
+    const __m256 tx1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.x, ray_o.x), ray_inv_v.x);
 
     __m256 t_min = _mm256_min_ps(tx0, tx1);
     __m256 t_max = _mm256_max_ps(tx0, tx1);
 
-    const __m256 ty0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.y, ray->o.y), ray->inv_v.y);
-    const __m256 ty1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.y, ray->o.y), ray->inv_v.y);
+    const __m256 ty0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.y, ray_o.y), ray_inv_v.y);
+    const __m256 ty1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.y, ray_o.y), ray_inv_v.y);
 
     t_min = _mm256_max_ps(t_min, _mm256_min_ps(ty0, ty1));
     t_max = _mm256_min_ps(t_max, _mm256_max_ps(ty0, ty1));
 
-    __m256 tz0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.z, ray->o.z), ray->inv_v.z);
-    __m256 tz1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.z, ray->o.z), ray->inv_v.z);
+    __m256 tz0 = _mm256_mul_ps(_mm256_sub_ps(aabb->min.z, ray_o.z), ray_inv_v.z);
+    __m256 tz1 = _mm256_mul_ps(_mm256_sub_ps(aabb->max.z, ray_o.z), ray_inv_v.z);
 
     t_min = _mm256_max_ps(t_min, _mm256_min_ps(tz0, tz1));
     t_max = _mm256_min_ps(t_max, _mm256_max_ps(tz0, tz1));

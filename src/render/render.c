@@ -38,7 +38,6 @@ static inline PackedPixel color_to_packed_pixel(const ps_Vec c) {
     return packed_pixel;
 }
 
-
 int render(FILE * restrict f, const Scene * restrict scene, const Camera * restrict cam, const RenderSettings * restrict settings, const BVH8Tree * restrict bvh) {
 
     fprintf(f, "P6\n");
@@ -62,7 +61,7 @@ int render(FILE * restrict f, const Scene * restrict scene, const Camera * restr
         unsigned char *dst[8];
         int valid_lanes = 0xFF;
         __m256i ps_depth = _mm256_setzero_si256();
-        Ray ray[8];
+        SoARay ray;
         ps_Vec c[2];
         ps_Vec mul[2];
 
@@ -91,20 +90,35 @@ int render(FILE * restrict f, const Scene * restrict scene, const Camera * restr
             double right = (-1.0 + (k + 0.5) * inv_width * 2.0) * x_scale;
 
             dst[k] = pa + ((size_t)i * settings->width + k) * 3;
-            ray[k] = create_ray(
-                cam->position,
-                normalize(v_add(
-                    cam->forward,
-                    v_add(
-                        scale(cam->right, right),
-                        scale(cam->up, up)
-                    )
-                ))
-            );
+            // Ray r = create_ray(
+            //     cam->position,
+            //     normalize(v_add(
+            //         cam->forward,
+            //         v_add(
+            //             scale(cam->right, right),
+            //             scale(cam->up, up)
+            //         )
+            //     ))
+            // );
+
+            Vec v = normalize(v_add(
+                cam->forward,
+                v_add(
+                    scale(cam->right, right),
+                    scale(cam->up, up)
+                )
+            ));
+
+            ray.ox[k] = cam->position.x;
+            ray.oy[k] = cam->position.y;
+            ray.oz[k] = cam->position.z;
+            ray.vx[k] = v.x;
+            ray.vy[k] = v.y;
+            ray.vz[k] = v.z;
         }
 
         while(valid_lanes)  {
-            const TraceResult res = packed_trace_ray(ray, scene, cam, bvh, ps_depth);
+            const TraceResult res = packed_trace_ray(&ray, scene, cam, bvh, ps_depth);
 
             const __m256 depth2 = _mm256_castsi256_ps(_mm256_cmpeq_epi32(_mm256_set1_epi32(2), ps_depth));
             const __m256 depth1 = _mm256_castsi256_ps(_mm256_cmpeq_epi32(_mm256_set1_epi32(1), ps_depth));
@@ -175,16 +189,31 @@ int render(FILE * restrict f, const Scene * restrict scene, const Camera * restr
                 double right = (-1.0 + (idx + 0.5) * inv_width * 2.0) * x_scale;
 
                 dst[k] = pa + ((size_t)i * settings->width + idx) * 3;
-                ray[k] = create_ray(
-                    cam->position,
-                    normalize(v_add(
-                        cam->forward,
-                        v_add(
-                            scale(cam->right, right),
-                            scale(cam->up, up)
-                        )
-                    ))
-                );
+                // Ray r = create_ray(
+                //     cam->position,
+                //     normalize(v_add(
+                //         cam->forward,
+                //         v_add(
+                //             scale(cam->right, right),
+                //             scale(cam->up, up)
+                //         )
+                //     ))
+                // );
+
+                Vec v = normalize(v_add(
+                    cam->forward,
+                    v_add(
+                        scale(cam->right, right),
+                        scale(cam->up, up)
+                    )
+                ));
+
+                ray.ox[k] = cam->position.x;
+                ray.oy[k] = cam->position.y;
+                ray.oz[k] = cam->position.z;
+                ray.vx[k] = v.x;
+                ray.vy[k] = v.y;
+                ray.vz[k] = v.z;
             }
 
             ps_depth = _mm256_add_epi32(ps_depth, _mm256_set1_epi32(1));

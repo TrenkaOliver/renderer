@@ -6,70 +6,67 @@
 
 #define EPSILON 1e-4
 
-__m256 packed_triangle_ray_intersection(const uint32_t idx, const PackedRay * restrict ray, const RuntimeTriangle * restrict array, PackedInfo * restrict info) {
+__m256 packed_triangle_ray_intersection(const uint32_t idx, const ps_Vec ray_o, const ps_Vec ray_v, const RuntimeTriangle * restrict array, PackedInfo * restrict info) {
+    const float * restrict arr = array->arr;
+    const uint32_t off = array->offset;
+
     const ps_Vec a = (ps_Vec){
-        .x = _mm256_loadu_ps(array->arr + idx),
-        .y = _mm256_loadu_ps(array->arr + array->offset + idx),
-        .z = _mm256_loadu_ps(array->arr + array->offset * 2 + idx)
+        .x = _mm256_loadu_ps(arr + idx),
+        .y = _mm256_loadu_ps(arr + off + idx),
+        .z = _mm256_loadu_ps(arr + off * 2 + idx)
     };
 
     const ps_Vec ab = (ps_Vec){
-        .x = _mm256_loadu_ps(array->arr + array->offset * 3 + idx),
-        .y = _mm256_loadu_ps(array->arr + array->offset * 4 + idx),
-        .z = _mm256_loadu_ps(array->arr + array->offset * 5 + idx)
+        .x = _mm256_loadu_ps(arr + off * 3 + idx),
+        .y = _mm256_loadu_ps(arr + off * 4 + idx),
+        .z = _mm256_loadu_ps(arr + off * 5 + idx)
     };
 
     const ps_Vec ac = (ps_Vec){
-        .x = _mm256_loadu_ps(array->arr + array->offset * 6 + idx),
-        .y = _mm256_loadu_ps(array->arr + array->offset * 7 + idx),
-        .z = _mm256_loadu_ps(array->arr + array->offset * 8 + idx)
+        .x = _mm256_loadu_ps(arr + off * 6 + idx),
+        .y = _mm256_loadu_ps(arr + off * 7 + idx),
+        .z = _mm256_loadu_ps(arr + off * 8 + idx)
     };
 
-    const ps_Vec ao = ps_v_sub(ray->o, a);
+    const ps_Vec ao = ps_v_sub(ray_o, a);
 
-    const ps_Vec cross_ray_v_ac = ps_cross(ray->v, ac);
+    const ps_Vec cross_ray_v_ac = ps_cross(ray_v, ac);
     const ps_Vec cross_ao_ab = ps_cross(ao, ab);
 
     const __m256 denom = ps_dot(ab, cross_ray_v_ac);
     const __m256 inv_denom = _mm256_rcp_ps(denom);
 
-    const __m256 zero = _mm256_setzero_ps();
-
-    __m256 valid = _mm256_cmp_ps(
-        denom,
-        zero,
-        _CMP_NEQ_OQ
-    );
-
     const __m256 u_num = ps_dot(ao, cross_ray_v_ac);
-    const __m256 v_num = ps_dot(ray->v, cross_ao_ab);
+    const __m256 v_num = ps_dot(ray_v, cross_ao_ab);
     const __m256 t_num = ps_dot(ac, cross_ao_ab);
 
     const __m256 u = _mm256_mul_ps(u_num, inv_denom);
-    info->u = u;
-
-
-    valid = _mm256_and_ps(
-        valid,
-        _mm256_cmp_ps(u, zero, _CMP_GE_OQ)
-    );
-
     const __m256 v = _mm256_mul_ps(v_num, inv_denom);
+    const __m256 t = _mm256_mul_ps(t_num, inv_denom);
+    
+    info->u = u;
     info->v = v;
 
-    valid = _mm256_and_ps(
-        valid,
-        _mm256_cmp_ps(v, zero, _CMP_GE_OQ)
+    const __m256 zero = _mm256_setzero_ps();
+    const __m256 signbit = _mm256_set1_ps(-0.0f);
+
+    const __m256 abs_denom = _mm256_andnot_ps(signbit, denom);
+
+    const __m256 denom_sign = _mm256_and_ps(denom, signbit);
+    const __m256 u_test = _mm256_xor_ps(u_num, denom_sign);
+    const __m256 v_test = _mm256_xor_ps(v_num, denom_sign);
+
+    const __m256 uv_sum = _mm256_add_ps(u_test, v_test);
+
+    const __m256 valid_denom = _mm256_cmp_ps(denom, zero, _CMP_NEQ_OQ);
+    const __m256 valid_u = _mm256_cmp_ps(u_test, zero, _CMP_GE_OQ);
+    const __m256 valid_v = _mm256_cmp_ps(v_test, zero, _CMP_GE_OQ);
+    const __m256 valid_uv = _mm256_cmp_ps(uv_sum, abs_denom, _CMP_LE_OQ);
+
+    const __m256 valid = _mm256_and_ps(
+        _mm256_and_ps(valid_denom, valid_u),
+        _mm256_and_ps(valid_v, valid_uv)
     );
-
-    const __m256 one = _mm256_set1_ps(1.0f);
-
-    valid = _mm256_and_ps(
-        valid,
-        _mm256_cmp_ps(_mm256_add_ps(u, v), one, _CMP_LE_OQ)
-    );
-
-    const __m256 t = _mm256_mul_ps(t_num, inv_denom);
 
     return _mm256_blendv_ps(_mm256_set1_ps(-1.0f), t, valid);
 }

@@ -116,10 +116,18 @@ static inline ps_Vec read_map(Texture * const *map, __m256 u, __m256 v, const in
     };
 }
 
-TraceResult packed_trace_ray(Ray * restrict ray, const Scene * restrict scene, const Camera * restrict cam, const BVH8Tree * restrict bvh, const __m256i depth) {
+TraceResult packed_trace_ray(SoARay * restrict ray, const Scene * restrict scene, const Camera * restrict cam, const BVH8Tree * restrict bvh, const __m256i depth) {
     const PackedHitResult hit = packed_get_first_object(ray, bvh, &scene->materials, &scene->textures);
-    
+
     const ps_Vec res = packed_sample(hit.ray.v, &scene->environment);
+
+    if (!_mm256_movemask_ps(hit.valid_hit))  {
+        return (TraceResult) {
+            .c = res,
+            .ref_mul = {_mm256_setzero_ps(), _mm256_setzero_ps(), _mm256_setzero_ps()},
+            .valid_ref = _mm256_setzero_ps()
+        };
+    }
 
     //calc uv coordinates
     const __m256 u = _mm256_sub_ps(hit.d_u, _mm256_floor_ps(hit.d_u));
@@ -324,6 +332,8 @@ TraceResult packed_trace_ray(Ray * restrict ray, const Scene * restrict scene, c
 
     const __m256 valid_reflection = _mm256_and_ps(_mm256_and_ps(hit.valid_hit, _mm256_castsi256_ps(valid_depth)), _mm256_and_ps(valid_roughness_mask, valid_metallic_mask));
 
+    const int valid_reflection_mask = _mm256_movemask_ps(valid_reflection);
+
     const __m256 one_minus_roughness = _mm256_sub_ps(_f1, roughness);
 
     const __m256 o_m_r_valid = _mm256_blendv_ps(_f0, one_minus_roughness, valid_reflection);
@@ -350,27 +360,25 @@ TraceResult packed_trace_ray(Ray * restrict ray, const Scene * restrict scene, c
     c_specular_ibl = ps_scale_ps(c_specular_ibl, one_minus_ref_str);
     c_specular_ibl = ps_hadamard(f_reflection, c_specular_ibl);
 
-    ps_Vec Hr = packed_importance_sample_GGX(_f0, _f0, alpha2, N);
+    if(valid_reflection_mask) {
+        ps_Vec Hr = packed_importance_sample_GGX(_f0, _f0, alpha2, N);
 
-    const ps_Vec reflection_dir = ps_normalize(
-        ps_v_sub(
-            ps_scale_ps(Hr, _mm256_mul_ps(_f2, VdotH)),
-            V
-        )
-    );
+        const ps_Vec reflection_dir = ps_normalize(
+            ps_v_sub(
+                ps_scale_ps(Hr, _mm256_mul_ps(_f2, VdotH)),
+                V
+            )
+        );
 
-    const ps_Vec O = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
+        _mm256_store_ps(ray->vx, reflection_dir.x);
+        _mm256_store_ps(ray->vy, reflection_dir.y);
+        _mm256_store_ps(ray->vz, reflection_dir.z);
 
-    float dx[8], dy[8], dz[8], ox[8], oy[8], oz[8];
-    _mm256_storeu_ps(dx, reflection_dir.x);
-    _mm256_storeu_ps(dy, reflection_dir.y);
-    _mm256_storeu_ps(dz, reflection_dir.z);
-    _mm256_storeu_ps(ox, O.x);
-    _mm256_storeu_ps(oy, O.y);
-    _mm256_storeu_ps(oz, O.z);
+        const ps_Vec O = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
 
-    for (int i = 0; i < 8; i++) {
-        ray[i] = create_ray(vec(ox[i], oy[i], oz[i]), vec(dx[i], dy[i], dz[i]));
+        _mm256_store_ps(ray->ox, O.x);
+        _mm256_store_ps(ray->oy, O.y);
+        _mm256_store_ps(ray->oz, O.z);
     }
 
     ps_Vec c = {
