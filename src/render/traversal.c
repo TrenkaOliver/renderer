@@ -82,14 +82,15 @@ static inline ScalarHitResult scalar_get_first_object(const SoARay * restrict ra
 
         for (int i = node->internal_count; i < node->internal_count + node->leaf_count; i++) {
             if (!(valid_mask & (1 << i))) continue;
-            ps_t_triangle = packed_triangle_ray_intersection(node->idx[i], ray_o, ray_v, &bvh->runtime_triangles, &info);
+            ps_t_triangle = packed_triangle_ray_intersection(node->idx[i], node->primitive_count[i], ray_o, ray_v, bvh->runtime_triangles.arr, &info);
 
             __m256 valid_hits = _mm256_and_ps(
-                _mm256_cmp_ps(ps_t_triangle, zero, _CMP_GE_OQ),
+                _mm256_cmp_ps(ps_t_triangle, zero, _CMP_GT_OQ),
                 _mm256_cmp_ps(ps_t_triangle, ps_t_min, _CMP_LT_OQ)
             );
 
-            unsigned valid_bits = _mm256_movemask_ps(valid_hits);
+            unsigned valid_lanes = (1u << node->primitive_count[i]) - 1u;
+            unsigned valid_bits = _mm256_movemask_ps(valid_hits) & valid_lanes;
 
             if (valid_bits) {
                 __m256 candidates = _mm256_blendv_ps(ps_max, ps_t_triangle, valid_hits);
@@ -104,7 +105,7 @@ static inline ScalarHitResult scalar_get_first_object(const SoARay * restrict ra
                 __m256 nearest_mask = _mm256_cmp_ps(candidates, ps_t_min, _CMP_EQ_OQ);
 
                 int lane = __builtin_ctz(_mm256_movemask_ps(nearest_mask));
-                best_idx = node->idx[i] + lane;
+                best_idx = node->triangle_idx[i] + lane;
 
                 __m256i lane_idx = _mm256_set1_epi32(lane);
 
@@ -129,6 +130,8 @@ static inline ScalarHitResult scalar_get_first_object(const SoARay * restrict ra
 
         sp += count;
     }
+
+    // printf("best_idx: %u, t_min: %f, u: %f, v: %f\n", best_idx, t_min, u, v);
 
     if (best_idx == (uint32_t)-1) 
         return (ScalarHitResult){.t = -1.0};
@@ -177,4 +180,92 @@ PackedHitResult packed_get_first_object(const SoARay * restrict ray, const BVH8T
         materials,
         textures
     );
+}
+
+static inline int scalar_is_shaded(const SoARay * restrict ray, const int lane, const BVH8Tree * restrict bvh) {
+    PackedInfo info;
+    uint32_t sp, idx_stack[128], idx;
+    __m256 ps_t_aabb, ps_t_triangle, valid;
+    float t_values[8];
+    int valid_mask;
+
+    sp = 0;
+    idx_stack[sp] = 0;
+    sp++;
+
+    ps_Vec ray_o = {
+        .x = _mm256_set1_ps(ray->ox[lane]),
+        .y = _mm256_set1_ps(ray->oy[lane]),
+        .z = _mm256_set1_ps(ray->oz[lane]),
+
+    };
+    ps_Vec ray_v = {
+        .x = _mm256_set1_ps(ray->vx[lane]),
+        .y = _mm256_set1_ps(ray->vy[lane]),
+        .z = _mm256_set1_ps(ray->vz[lane]),
+    };
+    ps_Vec inv_v = (ps_Vec){
+        .x = _mm256_set1_ps(1.0f / ray->vx[lane]),
+        .y = _mm256_set1_ps(1.0f / ray->vy[lane]),
+        .z = _mm256_set1_ps(1.0f / ray->vz[lane]),
+    };
+
+    const __m256 zero = _mm256_setzero_ps();
+
+    while (sp) {
+        sp--;
+        idx = idx_stack[sp];
+
+        const BVH8Node *node = bvh->nodes + idx;
+
+        ps_t_aabb = packed_aabb_ray_intersection(&node->bounds, ray_o, inv_v);
+
+        valid = _mm256_cmp_ps(ps_t_aabb, zero, _CMP_GE_OQ);
+
+        valid_mask = _mm256_movemask_ps(valid);
+
+        for (int i = node->internal_count; i < node->internal_count + node->leaf_count; i++) {
+            if (!(valid_mask & (1 << i))) continue;
+            ps_t_triangle = packed_triangle_ray_intersection(node->idx[i], node->primitive_count[i], ray_o, ray_v, bvh->runtime_triangles.arr, &info);
+
+            __m256 valid_hits = _mm256_cmp_ps(ps_t_triangle, zero, _CMP_GT_OQ);
+
+            if (_mm256_movemask_ps(valid_hits)) return 0;
+        }
+
+        _mm256_storeu_ps(t_values, ps_t_aabb);
+        
+        int count = 0;
+
+        for (int i = 0; i < node->internal_count; i++) {
+            if (valid_mask & (1 << i)) {
+                idx_stack[sp + count] = node->idx[i];
+                count++;
+            }
+        }
+
+        sp += count;
+    }
+
+    return 1;
+}
+
+__m256 packed_is_shaded(const SoARay * restrict ray, const BVH8Tree * restrict bvh, const __m256 valid_shadow) {
+    int visibility[8];
+    int valid_shadow_mask = _mm256_movemask_ps(valid_shadow);
+    
+    for (int i = 0; i < 8; i++) {
+        visibility[i] = (valid_shadow_mask & (1u << i)) ? scalar_is_shaded(ray, i, bvh) : 0;
+    }
+
+    return _mm256_castsi256_ps(_mm256_setr_epi32(
+        visibility[0] ? -1 : 0,
+        visibility[1] ? -1 : 0,
+        visibility[2] ? -1 : 0,
+        visibility[3] ? -1 : 0,
+        visibility[4] ? -1 : 0,
+        visibility[5] ? -1 : 0,
+        visibility[6] ? -1 : 0,
+        visibility[7] ? -1 : 0
+    ));
 }

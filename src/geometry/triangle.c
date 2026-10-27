@@ -6,26 +6,23 @@
 
 #define EPSILON 1e-4
 
-__m256 packed_triangle_ray_intersection(const uint32_t idx, const ps_Vec ray_o, const ps_Vec ray_v, const RuntimeTriangle * restrict array, PackedInfo * restrict info) {
-    const float * restrict arr = array->arr;
-    const uint32_t off = array->offset;
-
+__m256 packed_triangle_ray_intersection(const uint32_t idx, const uint32_t count, const ps_Vec ray_o, const ps_Vec ray_v, const float * restrict array, PackedInfo * restrict info) {
     const ps_Vec a = (ps_Vec){
-        .x = _mm256_loadu_ps(arr + idx),
-        .y = _mm256_loadu_ps(arr + off + idx),
-        .z = _mm256_loadu_ps(arr + off * 2 + idx)
+        .x = _mm256_loadu_ps(array + idx + count * 0),
+        .y = _mm256_loadu_ps(array + idx + count * 1),
+        .z = _mm256_loadu_ps(array + idx + count * 2)
     };
 
     const ps_Vec ab = (ps_Vec){
-        .x = _mm256_loadu_ps(arr + off * 3 + idx),
-        .y = _mm256_loadu_ps(arr + off * 4 + idx),
-        .z = _mm256_loadu_ps(arr + off * 5 + idx)
+        .x = _mm256_loadu_ps(array + idx + count * 3),
+        .y = _mm256_loadu_ps(array + idx + count * 4),
+        .z = _mm256_loadu_ps(array + idx + count * 5)
     };
 
     const ps_Vec ac = (ps_Vec){
-        .x = _mm256_loadu_ps(arr + off * 6 + idx),
-        .y = _mm256_loadu_ps(arr + off * 7 + idx),
-        .z = _mm256_loadu_ps(arr + off * 8 + idx)
+        .x = _mm256_loadu_ps(array + idx + count * 6),
+        .y = _mm256_loadu_ps(array + idx + count * 7),
+        .z = _mm256_loadu_ps(array + idx + count * 8)
     };
 
     const ps_Vec ao = ps_v_sub(ray_o, a);
@@ -196,8 +193,8 @@ static inline PackedMaterial create_packed_material(Material * restrict material
 }
 
 PackedHitResult packed_triangle_result(
-const float t_arr[8], const __m256 u, const __m256 v, const uint32_t building_indices[8], const PackedRay ray, const RuntimeTriangle * restrict runtime_triangles,
-const OriginalTriangle * restrict building_triangles, float **vertex_data, const DynArray * restrict materials, const DynArray * restrict textures
+const float t_arr[8], const __m256 u, const __m256 v, const uint32_t original_indices[8], const PackedRay ray, const RuntimeTriangle * restrict runtime_triangles,
+const OriginalTriangle * restrict original_triangles, float **vertex_data, const DynArray * restrict materials, const DynArray * restrict textures
 ) {
     const __m256 t = _mm256_loadu_ps(t_arr);
     const ps_Vec p = ps_v_add(ray.o, ps_scale_ps(ray.v, t));
@@ -241,40 +238,40 @@ const OriginalTriangle * restrict building_triangles, float **vertex_data, const
 
     for (int i = 0; i < 8; i++) {
         if (t_arr[i] != -1.0f) {
-            indices[i] = runtime_triangles->building_idx[building_indices[i]];
+            indices[i] = runtime_triangles->building_idx[original_indices[i]];
 
-            ngx[i] = building_triangles->nx[indices[i]];
-            ngy[i] = building_triangles->ny[indices[i]];
-            ngz[i] = building_triangles->nz[indices[i]];
+            ngx[i] = original_triangles->nx[indices[i]];
+            ngy[i] = original_triangles->ny[indices[i]];
+            ngz[i] = original_triangles->nz[indices[i]];
 
-            m[i] = ((Material *)materials->ptr) + building_triangles->material[indices[i]];
+            m[i] = ((Material *)materials->ptr) + original_triangles->material[indices[i]];
 
-            nax[i] = vertex_data[1][3 * building_triangles->ai[indices[i]] + 0];
-            nay[i] = vertex_data[1][3 * building_triangles->ai[indices[i]] + 1];
-            naz[i] = vertex_data[1][3 * building_triangles->ai[indices[i]] + 2];
+            nax[i] = vertex_data[1][3 * original_triangles->ai[indices[i]] + 0];
+            nay[i] = vertex_data[1][3 * original_triangles->ai[indices[i]] + 1];
+            naz[i] = vertex_data[1][3 * original_triangles->ai[indices[i]] + 2];
 
-            nbx[i] = vertex_data[1][3 * building_triangles->bi[indices[i]] + 0];
-            nby[i] = vertex_data[1][3 * building_triangles->bi[indices[i]] + 1];
-            nbz[i] = vertex_data[1][3 * building_triangles->bi[indices[i]] + 2];
+            nbx[i] = vertex_data[1][3 * original_triangles->bi[indices[i]] + 0];
+            nby[i] = vertex_data[1][3 * original_triangles->bi[indices[i]] + 1];
+            nbz[i] = vertex_data[1][3 * original_triangles->bi[indices[i]] + 2];
 
-            ncx[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 0];
-            ncy[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 1];
-            ncz[i] = vertex_data[1][3 * building_triangles->ci[indices[i]] + 2];
+            ncx[i] = vertex_data[1][3 * original_triangles->ci[indices[i]] + 0];
+            ncy[i] = vertex_data[1][3 * original_triangles->ci[indices[i]] + 1];
+            ncz[i] = vertex_data[1][3 * original_triangles->ci[indices[i]] + 2];
 
-            d_u[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 0] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 0] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 0] * v[i];
-            d_v[i] = vertex_data[2][2 * building_triangles->ai[indices[i]] + 1] * w[i] + vertex_data[2][2 * building_triangles->bi[indices[i]] + 1] * u[i] + vertex_data[2][2 * building_triangles->ci[indices[i]] + 1] * v[i];
+            d_u[i] = vertex_data[2][2 * original_triangles->ai[indices[i]] + 0] * w[i] + vertex_data[2][2 * original_triangles->bi[indices[i]] + 0] * u[i] + vertex_data[2][2 * original_triangles->ci[indices[i]] + 0] * v[i];
+            d_v[i] = vertex_data[2][2 * original_triangles->ai[indices[i]] + 1] * w[i] + vertex_data[2][2 * original_triangles->bi[indices[i]] + 1] * u[i] + vertex_data[2][2 * original_triangles->ci[indices[i]] + 1] * v[i];
 
-            ax[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 0];
-            ay[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 1];
-            az[i] = vertex_data[0][3 * building_triangles->ai[indices[i]] + 2];
+            ax[i] = vertex_data[0][3 * original_triangles->ai[indices[i]] + 0];
+            ay[i] = vertex_data[0][3 * original_triangles->ai[indices[i]] + 1];
+            az[i] = vertex_data[0][3 * original_triangles->ai[indices[i]] + 2];
 
-            bx[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 0];
-            by[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 1];
-            bz[i] = vertex_data[0][3 * building_triangles->bi[indices[i]] + 2];
+            bx[i] = vertex_data[0][3 * original_triangles->bi[indices[i]] + 0];
+            by[i] = vertex_data[0][3 * original_triangles->bi[indices[i]] + 1];
+            bz[i] = vertex_data[0][3 * original_triangles->bi[indices[i]] + 2];
 
-            cx[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 0];
-            cy[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 1];
-            cz[i] = vertex_data[0][3 * building_triangles->ci[indices[i]] + 2];
+            cx[i] = vertex_data[0][3 * original_triangles->ci[indices[i]] + 0];
+            cy[i] = vertex_data[0][3 * original_triangles->ci[indices[i]] + 1];
+            cz[i] = vertex_data[0][3 * original_triangles->ci[indices[i]] + 2];
         } else {
             indices[i] = 0;
 
@@ -365,11 +362,11 @@ const OriginalTriangle * restrict building_triangles, float **vertex_data, const
 
 
     for (int i = 0; i < 8; i++) {
-        uv_ab_u[i] = vertex_data[2][2 * building_triangles->bi[indices[i]] + 0] - vertex_data[2][2 * building_triangles->ai[indices[i]] + 0];
-        uv_ab_v[i] = vertex_data[2][2 * building_triangles->bi[indices[i]] + 1] - vertex_data[2][2 * building_triangles->ai[indices[i]] + 1];
+        uv_ab_u[i] = vertex_data[2][2 * original_triangles->bi[indices[i]] + 0] - vertex_data[2][2 * original_triangles->ai[indices[i]] + 0];
+        uv_ab_v[i] = vertex_data[2][2 * original_triangles->bi[indices[i]] + 1] - vertex_data[2][2 * original_triangles->ai[indices[i]] + 1];
 
-        uv_ac_u[i] = vertex_data[2][2 * building_triangles->ci[indices[i]] + 0] - vertex_data[2][2 * building_triangles->ai[indices[i]] + 0];
-        uv_ac_v[i] = vertex_data[2][2 * building_triangles->ci[indices[i]] + 1] - vertex_data[2][2 * building_triangles->ai[indices[i]] + 1];
+        uv_ac_u[i] = vertex_data[2][2 * original_triangles->ci[indices[i]] + 0] - vertex_data[2][2 * original_triangles->ai[indices[i]] + 0];
+        uv_ac_v[i] = vertex_data[2][2 * original_triangles->ci[indices[i]] + 1] - vertex_data[2][2 * original_triangles->ai[indices[i]] + 1];
     }
 
     const __m256 uv_ab[2] = {

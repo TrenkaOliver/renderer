@@ -9,8 +9,8 @@
 #include "accel/bvh.h"
 #include "math/vec.h"
 
-#define RES 0
-#define SAMPLE 50
+#define RES 2
+#define SAMPLE 1
 
 #if RES == 2
 
@@ -62,7 +62,7 @@ int create_import_scene(void) {
     //import_glTF(&scene, "./glTF/Spheres/MetalRoughSpheres.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
     import_glTF(&scene, "./glTF/DamagedHelmet/DamagedHelmet.gltf");
-    import_env(&scene, "./glTF/env/sky.hdr");
+    import_env(&scene, "./glTF/env/hangar.hdr");
 
     Mesh *mesh0 = (Mesh *)get_element(0, &scene.meshes);
     Mesh *mesh1 = (Mesh *)get_element(1, &scene.meshes);

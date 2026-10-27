@@ -16,7 +16,7 @@ typedef struct TraceResult {
 } TraceResult;
 
 PackedHitResult packed_get_first_object(const SoARay * restrict ray, const BVH8Tree * restrict bvh, const DynArray * restrict materials, const DynArray *restrict textures);
-//int is_shaded_by_object(Ray * restrict ray, BVH8Tree * restrict bvh);
+__m256 packed_is_shaded(const SoARay * restrict ray, const BVH8Tree * restrict bvh, const __m256 valid_shadow);
 
 TraceResult packed_trace_ray(SoARay * restrict ray, const Scene * restrict scene, const Camera * restrict cam, const BVH8Tree * restrict bvh, const __m256i depth);
 

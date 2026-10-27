@@ -511,7 +511,8 @@ uint32_t bvh8nodes_offset = 0;
 BVH8Node *bvh8nodes;
 
 RuntimeTriangle *triangles_ptr;
-uint32_t next = 0;
+uint32_t f_next = 0;
+uint32_t u_next = 0;
 
 uint32_t created_nodes = 0;
 
@@ -523,7 +524,6 @@ BVH8Tree create_bvh8_tree(OriginalTriangle *first, float **vertex_data, size_t c
     bvh8nodes = (BVH8Node *)((char *)bvh8nodes + bvh8nodes_offset);
 
     RuntimeTriangle runtime_triangles;
-    runtime_triangles.offset = triangles_offset;
 
     runtime_triangles.arr = malloc(9 * triangles_offset * sizeof(float) + 7 * sizeof(float));
     runtime_triangles.building_idx = malloc(triangles_offset * sizeof(uint32_t));
@@ -613,28 +613,29 @@ BVH8Tree create_bvh8_tree(OriginalTriangle *first, float **vertex_data, size_t c
     return bvh8tree;
 }
 void setup_leaf(float **vertex_data, uint32_t first_triangle, uint32_t count) {
+    float ax[count], ay[count], az[count];
     for (uint32_t i = 0; i < count; i++) {
-        float ax = triangles_ptr->arr[next + triangles_offset * 0 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 0];
-        float ay = triangles_ptr->arr[next + triangles_offset * 1 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 1];
-        float az =triangles_ptr->arr[next + triangles_offset * 2 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 2];
+        ax[i] = triangles_ptr->arr[f_next + count * 0 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 0];
+        ay[i] = triangles_ptr->arr[f_next + count * 1 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 1];
+        az[i] = triangles_ptr->arr[f_next + count * 2 + i] = vertex_data[0][3 * building_triangles.ai[first_triangle + i] + 2];
 
-        triangles_ptr->arr[next + triangles_offset * 3 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 0] - ax;
-        triangles_ptr->arr[next + triangles_offset * 4 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 1] - ay;
-        triangles_ptr->arr[next + triangles_offset * 5 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 2] - az;
+        triangles_ptr->arr[f_next + count * 3 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 0] - ax[i];
+        triangles_ptr->arr[f_next + count * 4 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 1] - ay[i];
+        triangles_ptr->arr[f_next + count * 5 + i] = vertex_data[0][3 * building_triangles.bi[first_triangle + i] + 2] - az[i];
 
-        triangles_ptr->arr[next + triangles_offset * 6 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 0] - ax;
-        triangles_ptr->arr[next + triangles_offset * 7 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 1] - ay;
-        triangles_ptr->arr[next + triangles_offset * 8 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 2] - az;
+        triangles_ptr->arr[f_next + count * 6 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 0] - ax[i];
+        triangles_ptr->arr[f_next + count * 7 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 1] - ay[i];
+        triangles_ptr->arr[f_next + count * 8 + i] = vertex_data[0][3 * building_triangles.ci[first_triangle + i] + 2] - az[i];
 
-        triangles_ptr->building_idx[next + i] = first_triangle + i;
+        triangles_ptr->building_idx[u_next + count * 0 + i] = first_triangle + i;
     }
 }
-
 
 
 uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
     AABB bounds[8];
     uint32_t indices[8];
+    uint32_t triangle_indices[8];
     uint8_t primitive_count[8] = {0};
     uint8_t count;
 
@@ -646,8 +647,10 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
     if (primitive_count[0]) {
         setup_leaf(vertex_data, bvh->nodes[indices[0]].first_primitive_or_right_child, primitive_count[0]);
-        indices[0] = next;
-        next += primitive_count[0];
+        indices[0] = f_next;
+        triangle_indices[0] = u_next;
+        u_next += primitive_count[0];
+        f_next += primitive_count[0] * 9;
     }
 
     indices[1] = bvh->nodes[idx].first_primitive_or_right_child;
@@ -656,8 +659,10 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
     if (primitive_count[1]) {
         setup_leaf(vertex_data, bvh->nodes[indices[1]].first_primitive_or_right_child, primitive_count[1]);
-        indices[1] = next;
-        next += primitive_count[1];
+        indices[1] = f_next;
+        triangle_indices[1] = u_next;
+        u_next += primitive_count[1];
+        f_next += primitive_count[1] * 9;
     }
 
     count = 2;
@@ -696,8 +701,10 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
         if (primitive_count[count]) {
             setup_leaf(vertex_data, bvh->nodes[right].first_primitive_or_right_child, primitive_count[count]);
-            indices[count] = next;
-            next += primitive_count[count];
+            indices[count] = f_next;
+            triangle_indices[count] = u_next;
+            u_next += primitive_count[count];
+            f_next += primitive_count[count] * 9;
         }
 
         indices[best_split] += 1;
@@ -707,8 +714,10 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
         if (primitive_count[best_split]) {
             setup_leaf(vertex_data, bvh->nodes[indices[best_split]].first_primitive_or_right_child, primitive_count[best_split]);
-            indices[best_split] = next;
-            next += primitive_count[best_split];
+            indices[best_split] = f_next;
+            triangle_indices[best_split] = u_next;
+            u_next += primitive_count[best_split];
+            f_next += primitive_count[best_split] * 9;
         }
 
         count++;
@@ -725,6 +734,10 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
             uint32_t tmp_index = indices[left];
             indices[left] = indices[right];
             indices[right] = tmp_index;
+
+            uint32_t tmp_triangle_index = triangle_indices[left];
+            triangle_indices[left] = triangle_indices[right];
+            triangle_indices[right] = tmp_triangle_index;
 
             AABB tmp_bounds = bounds[left];
             bounds[left] = bounds[right];
@@ -783,6 +796,7 @@ uint32_t collapse_bvh_node(BVH *bvh, float **vertex_data, uint32_t idx) {
 
     for (i = 0; i < count; i++) {
         node_ptr->idx[i] = indices[i];
+        node_ptr->triangle_idx[i] = triangle_indices[i];
         node_ptr->primitive_count[i] = primitive_count[i];
         min_x[i] = bounds[i].min[0];
         min_y[i] = bounds[i].min[1];

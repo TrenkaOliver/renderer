@@ -24,11 +24,10 @@ typedef struct OriginalTriangle {
 
 typedef struct RuntimeTriangle {
     float *arr;
-    uint32_t offset;
     uint32_t *building_idx;
 } RuntimeTriangle;
 
-__m256 packed_triangle_ray_intersection(const uint32_t idx, const ps_Vec ray_o, const ps_Vec ray_v, const RuntimeTriangle * restrict array, PackedInfo * restrict info);
+__m256 packed_triangle_ray_intersection(const uint32_t idx, const uint32_t count, const ps_Vec ray_o, const ps_Vec ray_v, const float * restrict array, PackedInfo * restrict info);
 
 PackedHitResult packed_triangle_result(
 const float t_arr[8], const __m256 u, const __m256 v, const uint32_t building_indices[8], const PackedRay ray, const RuntimeTriangle * restrict runtime_triangles,

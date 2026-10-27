@@ -121,13 +121,15 @@ TraceResult packed_trace_ray(SoARay * restrict ray, const Scene * restrict scene
 
     const ps_Vec res = packed_sample(hit.ray.v, &scene->environment);
 
-    if (!_mm256_movemask_ps(hit.valid_hit))  {
+    int valid_hit_mask = _mm256_movemask_ps(hit.valid_hit);
+
+    if (!valid_hit_mask)  {
         return (TraceResult) {
             .c = res,
             .ref_mul = {_mm256_setzero_ps(), _mm256_setzero_ps(), _mm256_setzero_ps()},
             .valid_ref = _mm256_setzero_ps()
         };
-    }
+    }    
 
     //calc uv coordinates
     const __m256 u = _mm256_sub_ps(hit.d_u, _mm256_floor_ps(hit.d_u));
@@ -203,8 +205,29 @@ TraceResult packed_trace_ray(SoARay * restrict ray, const Scene * restrict scene
     N.y = _mm256_blendv_ps(N.y, neg_N.y, ns_mask);
     N.z = _mm256_blendv_ps(N.z, neg_N.z, ns_mask);
     
-    const __m256 NdotL = _mm256_max_ps(_f0, ps_dot(N, L));
+    __m256 NdotL = _mm256_max_ps(_f0, ps_dot(N, L));
     const __m256 NdotV = _mm256_max_ps(_f0, ps_dot(N, V));
+
+    SoARay shadow_ray;
+
+    const ps_Vec shadow_origin = ps_v_add(hit.point, ps_scale_ps(hit.ng, _mm256_set1_ps(EPSILON)));
+
+    _mm256_store_ps(shadow_ray.ox, shadow_origin.x);
+    _mm256_store_ps(shadow_ray.oy, shadow_origin.y);
+    _mm256_store_ps(shadow_ray.oz, shadow_origin.z);
+
+    _mm256_store_ps(shadow_ray.vx, L.x);
+    _mm256_store_ps(shadow_ray.vy, L.y);
+    _mm256_store_ps(shadow_ray.vz, L.z);
+
+    const __m256 valid_shadow = _mm256_and_ps(
+        hit.valid_hit,
+        _mm256_cmp_ps(NdotL, _f0, _CMP_GT_OQ)
+    );
+
+    const __m256 visibility = packed_is_shaded(&shadow_ray, bvh, valid_shadow);
+
+    NdotL = _mm256_and_ps(NdotL, visibility);
 
     const __m256 _f004 = _mm256_set1_ps(0.04f);
     const __m256 _c = _mm256_mul_ps(_mm256_sub_ps(_f1, metallic), _f004);
