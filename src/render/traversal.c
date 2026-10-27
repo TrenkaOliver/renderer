@@ -89,8 +89,17 @@ static inline ScalarHitResult scalar_get_first_object(const SoARay * restrict ra
                 _mm256_cmp_ps(ps_t_triangle, ps_t_min, _CMP_LT_OQ)
             );
 
-            unsigned valid_lanes = (1u << node->primitive_count[i]) - 1u;
-            unsigned valid_bits = _mm256_movemask_ps(valid_hits) & valid_lanes;
+            const __m256i lane_mask = _mm256_cmpgt_epi32(
+                _mm256_set1_epi32(node->primitive_count[i]),
+                _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7)
+            );
+
+            valid_hits = _mm256_and_ps(
+                valid_hits,
+                _mm256_castsi256_ps(lane_mask)
+            );
+
+            unsigned valid_bits = _mm256_movemask_ps(valid_hits);
 
             if (valid_bits) {
                 __m256 candidates = _mm256_blendv_ps(ps_max, ps_t_triangle, valid_hits);
@@ -229,6 +238,16 @@ static inline int scalar_is_shaded(const SoARay * restrict ray, const int lane, 
             ps_t_triangle = packed_triangle_ray_intersection(node->idx[i], node->primitive_count[i], ray_o, ray_v, bvh->runtime_triangles.arr, &info);
 
             __m256 valid_hits = _mm256_cmp_ps(ps_t_triangle, zero, _CMP_GT_OQ);
+
+            // const __m256i lane_mask = _mm256_cmpgt_epi32(
+            //     _mm256_set1_epi32(node->primitive_count[i]),
+            //     _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7)
+            // );
+
+            // valid_hits = _mm256_and_ps(
+            //     valid_hits,
+            //     _mm256_castsi256_ps(lane_mask)
+            // );
 
             if (_mm256_movemask_ps(valid_hits)) return 0;
         }
